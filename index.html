@@ -889,7 +889,7 @@ function endChat(){
 }
 /* voice out: natural Google voice when the key is set, the phone's own voice otherwise */
 function stopAudio(){try{player.pause();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();S.speaking=false;}
-function afterSpeak(){S.speaking=false;if(S.chat&&S.chat.mode==='story'){if(S.storyHands&&!S.chat.busy&&$('micBtn'))startLong();else setOrb('','');return;}if(S.voiceMode&&S.chat&&!S.chat.busy)listen();else setOrb('','');}
+function afterSpeak(){S.speaking=false;if(S.chat&&S.chat.mode==='story'){setOrb('','take your time. tap the mic when you\'re ready');return;}if(S.voiceMode&&S.chat&&!S.chat.busy)listen();else setOrb('','');}
 function speak(text){
   var on=S.boot.settings.voice!==false;
   if(!on){afterSpeak();return;}

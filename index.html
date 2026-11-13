@@ -154,6 +154,8 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .orbstate{font-family:Caveat,cursive;font-size:23px;color:var(--accent);min-height:30px}
 .bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px rgba(196,86,47,.4);margin:6px auto 4px}
 .bigmic svg{width:32px;height:32px}
+.bigmic.floating{position:fixed;right:18px;bottom:calc(92px + var(--safe-b));margin:0;z-index:30;width:74px;height:74px;box-shadow:0 10px 26px rgba(91,42,58,.4)}
+.bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.done{background:#5f8a4e;animation:pulse 1.4s infinite}
 .livetalk{max-height:46vh;overflow:auto}
 .bigmic.live{background:#d2455f;animation:pulse 1.4s infinite}
@@ -834,8 +836,8 @@ function drawChat(){
   }
   v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
     '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+(c.mode==='story'?'Our storyteller':esc(Cname()))+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
-    (SR?'<button class="bigmic" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+(c.mode==='story'?'Tap the mic and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.':'Tap to talk. I\'ll listen, answer, then listen again.')+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
-    '</div><div class="bubbles" id="bubs"></div>'+
+    (SR?'<button class="bigmic'+(c.mode==='story'?' floating'+(S.kb?' raised':''):'')+'" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+(c.mode==='story'?'Tap the mic (bottom right) and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.':'Tap to talk. I\'ll listen, answer, then listen again.')+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
+    '</div><div class="bubbles" id="bubs"></div>'+(c.mode==='story'?'<div style="height:96px"></div>':'')+
     '<div class="composer'+(SR&&!S.kb?' hidden':'')+'" id="comp"><textarea id="msg" rows="1" placeholder="Type, or use your keyboard\'s mic…"></textarea><button class="round primary" id="sendBtn" aria-label="Send">'+I.send+'</button></div>'+
     (SR?'<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="kbBtn">'+I.kb+' '+(S.kb?'Hide keyboard':'Type instead')+'</button></div>':'');
   c.messages.forEach(function(m,i){if(i===0&&m.role==='user'&&/^(Today's question was:|I'd like to talk more about)/.test(m.text))return;addBubble(m.role==='user'?'me':'ai',m.text);});
@@ -847,7 +849,7 @@ function drawChat(){
   ta.oninput=function(){ta.style.height='auto';ta.style.height=Math.min(140,ta.scrollHeight)+'px';};
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>700){e.preventDefault();$('sendBtn').click();}};
   $('sendBtn').onclick=function(){unlockAudio();var t=ta.value.trim();if(!t||c.busy)return;ta.value='';ta.style.height='auto';sendChat(t);};
-  if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
+  if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);if($('micBtn'))$('micBtn').classList.toggle('raised',S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
   if($('micBtn'))$('micBtn').onclick=function(){
     unlockAudio();
     if(c.mode==='story'){

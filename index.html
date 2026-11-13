@@ -134,7 +134,7 @@ label.lbl{display:block;font-weight:800;font-size:14px;margin:14px 0 6px}
 .env.wiggle{animation:wig 2.6s ease-in-out infinite}
 @keyframes wig{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-2.5deg)}95%{transform:rotate(2.5deg)}}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(255,250,242,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + var(--safe-b));z-index:20}
-nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:800;color:var(--muted);padding:4px 8px;min-width:58px;position:relative}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--muted);padding:4px 2px;min-width:50px;position:relative;white-space:nowrap}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--accent)}
 nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
@@ -209,6 +209,19 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .vopt b{display:block;font-size:14px}.vopt span{font-size:12px;color:var(--muted)}
 .vopt .play{width:30px;height:30px;border-radius:50%;background:rgba(233,160,59,.2);display:grid;place-items:center;flex:none}
 .vopt .play svg{width:14px;height:14px}
+/* our story timeline */
+.tl{position:relative;margin:0 0 30px;padding-left:30px}
+.tl:before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:3px;border-radius:3px;background:linear-gradient(var(--accent2),var(--accent),var(--sky3))}
+.tl .yr{position:relative;font-family:Fraunces,serif;font-weight:650;font-size:26px;color:var(--deep);margin:18px 0 10px -30px;padding-left:30px}
+.tl .yr:before{content:"";position:absolute;left:3px;top:9px;width:19px;height:19px;border-radius:50%;background:var(--lemon);box-shadow:0 0 0 4px var(--cream),0 0 12px rgba(245,200,75,.8)}
+.mo{position:relative;cursor:pointer;text-align:left;width:100%;display:block}
+.mo:before{content:"";position:absolute;left:-24px;top:24px;width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--cream)}
+.mo .when{font-family:Caveat,cursive;font-size:21px;color:var(--accent);line-height:1}
+.mo .ttl{font-family:Fraunces,serif;font-weight:650;font-size:19px;color:var(--deep);margin:2px 0 4px}
+.mo .pl{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px}
+.mo .det{white-space:pre-wrap;color:var(--ink);font-size:15px}
+.mo .by{font-size:12px;color:var(--muted);margin-top:8px}
+.storyhero{background:linear-gradient(135deg,#fff7ec,#fde3cf)}
 .lettershow{background:#fffdf7;border-radius:10px;padding:24px 20px;box-shadow:var(--shadow);position:relative;animation:unfold .6s ease}
 @keyframes unfold{from{transform:scaleY(.2) translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .lettershow .t{font-family:Caveat,cursive;font-size:28px;color:var(--accent)}
@@ -225,6 +238,7 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
   <button data-tab="home"><span data-i="home"></span>Home</button>
   <button data-tab="love"><span data-i="heart"></span>Love<span class="badge hidden" id="loveBadge"></span></button>
   <button data-tab="talk"><span data-i="chat"></span>Talk</button>
+  <button data-tab="story"><span data-i="route"></span>Our Story</button>
   <button data-tab="journal"><span data-i="book"></span>Journal</button>
   <button data-tab="memories"><span data-i="photo"></span>Memories</button>
 </nav>
@@ -268,6 +282,7 @@ var I = {
   stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
   kb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>',
   mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'
 };
 document.querySelectorAll('[data-i]').forEach(function(el){el.outerHTML=I[el.getAttribute('data-i')];});
@@ -394,7 +409,7 @@ function go(tab){
   setNav(tab);
   $('fab').classList.add('hidden');
   window.scrollTo(0,0);
-  ({home:renderHome,love:renderLove,talk:renderTalk,journal:renderJournal,memories:renderMemories})[tab]();
+  ({home:renderHome,love:renderLove,talk:renderTalk,story:renderStory,journal:renderJournal,memories:renderMemories})[tab]();
   wireGear();
 }
 
@@ -536,6 +551,57 @@ function openLetter(e){
     if(!confirm('Break the seal on "'+e.title+'"?'))return;
     api('api_openLetter',e.id).then(function(x){celebrate(24);renderLove();wireGear();show(x);}).catch(function(err){toast(errMsg(err));});
   } else api('api_openLetter',e.id).then(show).catch(function(err){toast(errMsg(err));});
+}
+
+/* ---------------- our story ---------------- */
+function renderStory(){
+  if(S.chat&&S.chat.mode==='story'){drawChat();return;}
+  var v=$('view'), p=partner();
+  v.innerHTML=topbar('Our Story','The McBride memoir, written together')+
+    '<div class="card storyhero">'+tape(2)+'<div class="eyebrow">'+I.route+' How we got here</div>'+
+      '<div class="q" style="margin-bottom:12px">Tell me your story, and I\'ll ask the questions that bring the memories back.</div>'+
+      '<div class="row"><button class="btn" id="sTell">'+I.mic+' Tell our story</button><button class="btn soft" id="sAdd">'+I.plus+' Add a moment</button></div>'+
+      '<div style="margin-top:6px"><button class="btn ghost small" id="sFresh">Start a fresh session</button></div></div>'+
+    '<div id="tline"><div class="empty"><span class="spinner"></span></div></div>';
+  $('sTell').onclick=function(){unlockAudio();startChat('story');};
+  $('sFresh').onclick=function(){unlockAudio();startChat('story',null,true);};
+  $('sAdd').onclick=function(){openMoment(null);};
+  api('api_story').then(function(r){
+    var box=$('tline');if(!box)return;
+    var ms=r.moments||[];S.moments=ms;
+    if(!ms.length){box.innerHTML='<div class="card empty">'+tape(0)+'<div class="big">📖</div><div class="serif">Every love story has a first chapter</div>Tap <b>Tell our story</b> and just start talking: how you met, when you married, where life took you. I\'ll write it down and ask about the rest. '+esc(nm(p))+' can add to it from '+(p==='heidi'?'her':'his')+' phone too.</div>';return;}
+    var tl=document.createElement('div');tl.className='tl';var lastYr=null;
+    ms.forEach(function(m,i){
+      var yr=/^\d{4}/.test(m.sortKey||'')&&m.sortKey.slice(0,4)!=='9999'?m.sortKey.slice(0,4):'Somewhere along the way';
+      if(yr!==lastYr){var y=document.createElement('div');y.className='yr';y.textContent=yr;tl.appendChild(y);lastYr=yr;}
+      var c=document.createElement('button');c.className='card mo';
+      var det=m.details||'';var short=det.length>260?det.slice(0,260)+'…':det;
+      c.innerHTML=tape(i,i%2?'r':'l')+(m.when?'<div class="when">'+esc(m.when)+'</div>':'')+'<div class="ttl">'+esc(m.title)+'</div>'+(m.place?'<div class="pl">📍 '+esc(m.place)+'</div>':'')+(short?'<div class="det">'+esc(short)+'</div>':'')+
+        '<div class="by">Added by '+esc(nm(m.addedBy))+(m.updatedBy&&m.updatedBy!==m.addedBy?' · added to by '+esc(nm(m.updatedBy)):'')+'</div>';
+      c.onclick=function(){openMoment(m);};
+      tl.appendChild(c);
+    });
+    box.innerHTML='';box.appendChild(tl);
+  }).catch(function(e){$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
+}
+function openMoment(m){
+  m=m||{};
+  openSheet('<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>'+(m.id?'A moment in our story':'Add a moment')+'</h2><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    '<label class="lbl">What happened?</label><input class="field" id="mTitle" placeholder="The night we met" value="'+esc(m.title)+'">'+
+    '<label class="lbl">When?</label><input class="field" id="mWhen" placeholder="June 12, 2010 · summer 2009 · around 2004" value="'+esc(m.when)+'">'+
+    '<label class="lbl">Where?</label><input class="field" id="mPlace" placeholder="Honolulu, Hawaii" value="'+esc(m.place)+'">'+
+    '<label class="lbl">The story</label><textarea class="box handbox" id="mDet" style="min-height:180px" placeholder="Tell it like you\'d tell it at the dinner table…">'+esc(m.details)+'</textarea>'+
+    '<div class="row" style="justify-content:space-between;margin-top:12px">'+(m.id?'<button class="btn ghost" id="mDel">'+I.trash+' Remove</button>':'<span></span>')+'<button class="btn" id="mSave">Save to our story</button></div>'+
+    (m.id?'<div style="margin-top:10px"><button class="btn soft" id="mTalk">'+I.mic+' Talk more about this</button></div>':''));
+  $('cX').onclick=closeSheet;
+  $('mSave').onclick=function(){
+    var btn=this;btn.disabled=true;
+    api('api_saveMoment',{id:m.id||'',title:$('mTitle').value,when:$('mWhen').value,place:$('mPlace').value,details:$('mDet').value})
+      .then(function(){closeSheet();if(!m.id)celebrate(18);toast('Saved to our story 📖');renderStory();wireGear();})
+      .catch(function(e){toast(errMsg(e));btn.disabled=false;});
+  };
+  if($('mDel'))$('mDel').onclick=function(){if(!confirm('Remove "'+m.title+'" from your story?'))return;api('api_deleteMoment',m.id).then(function(){closeSheet();toast('Removed');renderStory();wireGear();});};
+  if($('mTalk'))$('mTalk').onclick=function(){closeSheet();unlockAudio();startChat('story','__moment__'+m.title+(m.when?' ('+m.when+')':''));};
 }
 
 /* ---------------- journal ---------------- */
@@ -716,7 +782,7 @@ function stopRecording(cancel){if(REC){REC.cancel=!!cancel;try{REC.mr.stop();}ca
 /* ---------------- talk ---------------- */
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 function renderTalk(){
-  if(S.chat){drawChat();return;}
+  if(S.chat&&S.chat.mode!=='story'){drawChat();return;}
   var v=$('view');
   v.innerHTML=topbar('Talk','')+
     '<div class="orbwrap"><div class="orb"></div><div class="orbname">'+esc(Cname())+'</div><div class="orbstate">here whenever you need me</div></div>'+
@@ -732,12 +798,15 @@ function renderTalk(){
     list.forEach(function(e,i){box.appendChild(entryEl(e,{i:i}));});
   });
 }
-function startChat(mode,question){
+function startChat(mode,question,fresh){
   stopVoice();
-  S.chat={id:null,mode:mode,messages:[],live:true,busy:false};
-  S.tab='talk';setNav('talk');$('fab').classList.add('hidden');window.scrollTo(0,0);
+  S.chat={id:null,mode:mode,messages:[],live:true,busy:false,fresh:!!fresh};
+  S.tab=mode==='story'?'story':'talk';setNav(S.tab);$('fab').classList.add('hidden');window.scrollTo(0,0);
   drawChat();wireGear();
-  sendChat(question?('Today\'s question was: "'+question+'". I\'d like to talk it through.'):'',true);
+  var opener='';
+  if(question&&question.indexOf('__moment__')===0)opener='I\'d like to talk more about "'+question.slice(10)+'" in our story. Ask me about it.';
+  else if(question)opener='Today\'s question was: "'+question+'". I\'d like to talk it through.';
+  sendChat(opener,true);
 }
 function openChat(id){
   api('api_getChat',id).then(function(e){
@@ -760,13 +829,13 @@ function drawChat(){
     c.messages.forEach(function(m){addBubble(m.role==='user'?'me':'ai',m.text,m.role==='user'?nm(c.author):null);});
     $('backTalk').onclick=function(){S.chat=null;go('talk');};return;
   }
-  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label><button class="btn soft" id="endChat">End &amp; save</button></div></div>'+
-    '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+esc(Cname())+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
+  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
+    '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+(c.mode==='story'?'Our storyteller':esc(Cname()))+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
     (SR?'<button class="bigmic" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint">Tap to talk. I\'ll listen, answer, then listen again.</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
     '</div><div class="bubbles" id="bubs"></div>'+
     '<div class="composer'+(SR&&!S.kb?' hidden':'')+'" id="comp"><textarea id="msg" rows="1" placeholder="Type, or use your keyboard\'s mic…"></textarea><button class="round primary" id="sendBtn" aria-label="Send">'+I.send+'</button></div>'+
     (SR?'<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="kbBtn">'+I.kb+' '+(S.kb?'Hide keyboard':'Type instead')+'</button></div>':'');
-  c.messages.forEach(function(m,i){if(i===0&&m.role==='user'&&/^Today's question was:/.test(m.text))return;addBubble(m.role==='user'?'me':'ai',m.text);});
+  c.messages.forEach(function(m,i){if(i===0&&m.role==='user'&&/^(Today's question was:|I'd like to talk more about)/.test(m.text))return;addBubble(m.role==='user'?'me':'ai',m.text);});
   if(c.busy)addBubble('ai typing',Cname()+' is thinking…');
   $('spk').onclick=function(){var on=!(S.boot.settings.voice!==false);S.boot.settings.voice=on;this.classList.toggle('on',on);if(!on)stopAudio();api('api_setSettings',{voice:on});};
   $('endChat').onclick=endChat;
@@ -791,8 +860,11 @@ function sendChat(text,first){
   var c=S.chat;if(!c)return;
   if(text){c.messages.push({role:'user',text:text});if(!first)addBubble('me',text);}
   c.busy=true;var typing=addBubble('ai typing',Cname()+' is thinking…');setOrb('thinking','thinking…');
-  api('api_chat',c.id,text,c.mode).then(function(r){
-    c.busy=false;c.id=r.chatId;c.messages.push({role:'assistant',text:r.reply});
+  var call=c.mode==='story'?api('api_storyChat',text,c.fresh):api('api_chat',c.id,text,c.mode);
+  c.fresh=false;
+  call.then(function(r){
+    c.busy=false;c.id=r.chatId||'story';c.messages.push({role:'assistant',text:r.reply});
+    if(c.mode==='story'&&(r.added||r.updated)){var n=[];if(r.added)n.push(r.added+' new moment'+(r.added>1?'s':''));if(r.updated)n.push(r.updated+' updated');toast('📖 Our story: '+n.join(', '),3200);}
     if(S.chat!==c||!$('bubs')){return;}
     typing.remove();addBubble('ai',r.reply);
     speak(r.reply);
@@ -800,6 +872,7 @@ function sendChat(text,first){
 }
 function endChat(){
   var c=S.chat;stopVoice();
+  if(c&&c.mode==='story'){S.chat=null;go('story');return;}
   if(!c||!c.id){S.chat=null;go('talk');return;}
   $('endChat').disabled=true;$('endChat').innerHTML='<span class="spinner"></span> Saving';
   api('api_endChat',c.id).then(function(){S.chat=null;celebrate(18);toast('Tucked into your journal 💛');var st=S.boot.streaks;if(st&&!st.todayMe){st.todayMe=true;st.me=(st.me||0)+1;}go('talk');}).catch(function(){S.chat=null;go('talk');});

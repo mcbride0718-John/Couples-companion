@@ -154,6 +154,8 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .orbstate{font-family:Caveat,cursive;font-size:23px;color:var(--accent);min-height:30px}
 .bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px rgba(196,86,47,.4);margin:6px auto 4px}
 .bigmic svg{width:32px;height:32px}
+.bigmic.done{background:#5f8a4e;animation:pulse 1.4s infinite}
+.livetalk{max-height:46vh;overflow:auto}
 .bigmic.live{background:#d2455f;animation:pulse 1.4s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(210,69,95,.5)}70%{box-shadow:0 0 0 18px rgba(210,69,95,0)}100%{box-shadow:0 0 0 0 rgba(210,69,95,0)}}
 .bubbles{display:flex;flex-direction:column;gap:10px;margin:16px 0 12px}
@@ -283,6 +285,7 @@ var I = {
   kb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>',
   mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
   route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'
 };
 document.querySelectorAll('[data-i]').forEach(function(el){el.outerHTML=I[el.getAttribute('data-i')];});
@@ -831,11 +834,12 @@ function drawChat(){
   }
   v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
     '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+(c.mode==='story'?'Our storyteller':esc(Cname()))+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
-    (SR?'<button class="bigmic" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint">Tap to talk. I\'ll listen, answer, then listen again.</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
+    (SR?'<button class="bigmic" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+(c.mode==='story'?'Tap the mic and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.':'Tap to talk. I\'ll listen, answer, then listen again.')+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
     '</div><div class="bubbles" id="bubs"></div>'+
     '<div class="composer'+(SR&&!S.kb?' hidden':'')+'" id="comp"><textarea id="msg" rows="1" placeholder="Type, or use your keyboard\'s mic…"></textarea><button class="round primary" id="sendBtn" aria-label="Send">'+I.send+'</button></div>'+
     (SR?'<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="kbBtn">'+I.kb+' '+(S.kb?'Hide keyboard':'Type instead')+'</button></div>':'');
   c.messages.forEach(function(m,i){if(i===0&&m.role==='user'&&/^(Today's question was:|I'd like to talk more about)/.test(m.text))return;addBubble(m.role==='user'?'me':'ai',m.text);});
+  if(c.mode==='story'){var dr='';try{dr=localStorage.getItem('cc_story_draft')||'';}catch(e){}if(dr&&!LONG.on){S.kb=true;setTimeout(function(){if($('msg')){$('comp').classList.remove('hidden');$('msg').value=dr;toast('I saved what you were saying last time. Tap send when you\'re ready.',4500);}},300);}}
   if(c.busy)addBubble('ai typing',Cname()+' is thinking…');
   $('spk').onclick=function(){var on=!(S.boot.settings.voice!==false);S.boot.settings.voice=on;this.classList.toggle('on',on);if(!on)stopAudio();api('api_setSettings',{voice:on});};
   $('endChat').onclick=endChat;
@@ -846,6 +850,10 @@ function drawChat(){
   if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
   if($('micBtn'))$('micBtn').onclick=function(){
     unlockAudio();
+    if(c.mode==='story'){
+      if(LONG.on){finishLong();return;}
+      stopAudio();S.storyHands=true;startLong();return;
+    }
     if(S.voiceMode){stopVoice();setOrb('','paused. tap to talk again');return;}
     S.voiceMode=true;$('micBtn').classList.add('live');
     if(S.speaking)stopAudio();
@@ -879,7 +887,7 @@ function endChat(){
 }
 /* voice out: natural Google voice when the key is set, the phone's own voice otherwise */
 function stopAudio(){try{player.pause();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();S.speaking=false;}
-function afterSpeak(){S.speaking=false;if(S.voiceMode&&S.chat&&!S.chat.busy)listen();else setOrb('','');}
+function afterSpeak(){S.speaking=false;if(S.chat&&S.chat.mode==='story'){if(S.storyHands&&!S.chat.busy&&$('micBtn'))startLong();else setOrb('','');return;}if(S.voiceMode&&S.chat&&!S.chat.busy)listen();else setOrb('','');}
 function speak(text){
   var on=S.boot.settings.voice!==false;
   if(!on){afterSpeak();return;}
@@ -909,6 +917,58 @@ function browserSpeak(text){
   u.onend=u.onerror=afterSpeak;
   speechSynthesis.speak(u);
 }
+/* storyteller: long listening. Keeps the mic open through pauses until you tap ✓ or say "I'm done". */
+var LONG={on:false,text:'',interim:'',rec:null,bub:null};
+function saveDraft(){try{localStorage.setItem('cc_story_draft',LONG.text);}catch(e){}}
+function showLong(){
+  var t=(LONG.text+' '+LONG.interim).trim();
+  if(!LONG.bub){LONG.bub=addBubble('me typing livetalk','');}
+  LONG.bub.textContent=t||'…';LONG.bub.scrollTop=LONG.bub.scrollHeight;
+  LONG.bub.scrollIntoView({block:'nearest'});
+}
+function startLong(){
+  if(!SR||LONG.on)return;
+  LONG.on=true;LONG.interim='';
+  try{LONG.text=localStorage.getItem('cc_story_draft')||LONG.text||'';}catch(e){}
+  if($('msg')&&$('msg').value.trim()&&!LONG.text){LONG.text=$('msg').value.trim();$('msg').value='';}
+  var b=$('micBtn');if(b){b.classList.add('done');b.innerHTML=I.check;}
+  var h=$('micHint');if(h)h.textContent='I\'m listening, take all the time you need. Tap ✓ or say "I\'m done" when you\'ve finished.';
+  setOrb('listening','listening…');showLong();runLong();
+}
+function runLong(){
+  if(!LONG.on)return;
+  var r=new SR();r.lang='en-US';r.continuous=true;r.interimResults=true;LONG.rec=r;
+  r.onresult=function(e){
+    var interim='';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      var t=e.results[i][0].transcript;
+      if(e.results[i].isFinal){LONG.text=(LONG.text+' '+t.trim()).trim();saveDraft();}
+      else interim+=t;
+    }
+    LONG.interim=interim.trim();showLong();
+    if(/\b(i'?m|i am) (all )?done( talking)?[.!]?$/i.test(LONG.text)){LONG.text=LONG.text.replace(/\s*\b(i'?m|i am) (all )?done( talking)?[.!]?$/i,'');finishLong();}
+  };
+  r.onerror=function(ev){if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){stopLong(false);toast('The microphone is blocked. Allow it in your browser, or tap "Type instead".',5000);}};
+  r.onend=function(){if(LONG.on)setTimeout(runLong,200);};   // the browser stops after a pause; we quietly start again
+  try{r.start();}catch(e){}
+}
+function stopLong(keepText){
+  LONG.on=false;
+  if(LONG.rec){try{LONG.rec.onend=null;LONG.rec.abort();}catch(e){}LONG.rec=null;}
+  if(LONG.interim){LONG.text=(LONG.text+' '+LONG.interim).trim();LONG.interim='';}
+  if(LONG.bub){LONG.bub.remove();LONG.bub=null;}
+  var b=$('micBtn');if(b){b.classList.remove('done');b.innerHTML=I.mic;}
+  var h=$('micHint');if(h)h.textContent='Tap the mic and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.';
+  if(!keepText){if(LONG.text&&$('msg')){$('msg').value=LONG.text;}LONG.text='';}
+}
+function finishLong(){
+  var t=(LONG.text+' '+LONG.interim).trim();
+  LONG.text='';LONG.interim='';stopLong(true);
+  try{localStorage.removeItem('cc_story_draft');}catch(e){}
+  if(!t){setOrb('','');return;}
+  sendChat(t);
+}
+
 /* voice in */
 var recog=null;
 function listen(){
@@ -935,6 +995,7 @@ function listen(){
 }
 function stopVoice(){
   S.voiceMode=false;
+  if(LONG.on)stopLong(false);
   if(recog){try{recog.abort();}catch(e){}recog=null;}S.listening=false;
   stopAudio();
   var m=$('micBtn');if(m)m.classList.remove('live');

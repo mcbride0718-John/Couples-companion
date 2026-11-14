@@ -834,9 +834,10 @@ function drawChat(){
     c.messages.forEach(function(m){addBubble(m.role==='user'?'me':'ai',m.text,m.role==='user'?nm(c.author):null);});
     $('backTalk').onclick=function(){S.chat=null;go('talk');};return;
   }
-  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
+  var hf=c.mode!=='story'||handsFree();
+  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><span class="row" style="gap:14px"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label>'+(c.mode==='story'?'<label class="toggle"><span class="sw'+(handsFree()?' on':'')+'" id="hfSw"></span>Hands-free</label>':'')+'</span><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
     '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+(c.mode==='story'?'Our storyteller':esc(Cname()))+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
-    (SR?'<button class="bigmic'+(c.mode==='story'?' floating'+(S.kb?' raised':''):'')+'" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+(c.mode==='story'?'Tap the mic (bottom right) and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.':'Tap to talk. I\'ll listen, answer, then listen again.')+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
+    (SR?'<button class="bigmic'+(c.mode==='story'?' floating'+(S.kb?' raised':''):'')+'" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+micHintText(c)+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
     '</div><div class="bubbles" id="bubs"></div>'+(c.mode==='story'?'<div style="height:96px"></div>':'')+
     '<div class="composer'+(SR&&!S.kb?' hidden':'')+'" id="comp"><textarea id="msg" rows="1" placeholder="Type, or use your keyboard\'s mic…"></textarea><button class="round primary" id="sendBtn" aria-label="Send">'+I.send+'</button></div>'+
     (SR?'<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="kbBtn">'+I.kb+' '+(S.kb?'Hide keyboard':'Type instead')+'</button></div>':'');
@@ -845,6 +846,7 @@ function drawChat(){
   if(c.busy)addBubble('ai typing',Cname()+' is thinking…');
   $('spk').onclick=function(){var on=!(S.boot.settings.voice!==false);S.boot.settings.voice=on;this.classList.toggle('on',on);if(!on)stopAudio();api('api_setSettings',{voice:on});};
   $('endChat').onclick=endChat;
+  if($('hfSw'))$('hfSw').onclick=function(){var on=!handsFree();try{localStorage.setItem('cc_handsfree',on?'1':'');}catch(e){}this.classList.toggle('on',on);if($('micHint'))$('micHint').textContent=micHintText(c);toast(on?'Hands-free on: after each question I\'ll start listening on my own':'Hands-free off: tap the mic when you\'re ready',3200);if(!on&&LONG.on&&!LONG.text&&!LONG.interim)stopLong(false);};
   var ta=$('msg');
   ta.oninput=function(){ta.style.height='auto';ta.style.height=Math.min(140,ta.scrollHeight)+'px';};
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>700){e.preventDefault();$('sendBtn').click();}};
@@ -852,14 +854,8 @@ function drawChat(){
   if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);if($('micBtn'))$('micBtn').classList.toggle('raised',S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
   if($('micBtn'))$('micBtn').onclick=function(){
     unlockAudio();
-    if(c.mode==='story'){
-      if(LONG.on){finishLong();return;}
-      stopAudio();S.storyHands=true;startLong();return;
-    }
-    if(S.voiceMode){stopVoice();setOrb('','paused. tap to talk again');return;}
-    S.voiceMode=true;$('micBtn').classList.add('live');
-    if(S.speaking)stopAudio();
-    listen();
+    if(LONG.on){ if((LONG.text+LONG.interim).trim())finishLong(); else {stopVoice();setOrb('','paused. tap the mic when you\'re ready');} return; }
+    stopAudio();S.voiceMode=true;startLong();
   };
 }
 function addBubble(cls,text,label){
@@ -889,7 +885,13 @@ function endChat(){
 }
 /* voice out: natural Google voice when the key is set, the phone's own voice otherwise */
 function stopAudio(){try{player.pause();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();S.speaking=false;}
-function afterSpeak(){S.speaking=false;if(S.chat&&S.chat.mode==='story'){setOrb('','take your time. tap the mic when you\'re ready');return;}if(S.voiceMode&&S.chat&&!S.chat.busy)listen();else setOrb('','');}
+function afterSpeak(){
+  S.speaking=false;
+  if(!S.chat||S.chat.busy)return;
+  var auto=S.voiceMode&&(S.chat.mode!=='story'||handsFree());
+  if(auto&&$('micBtn')){setTimeout(function(){if(S.chat&&!S.chat.busy&&!S.speaking&&S.voiceMode)startLong();},600);return;}
+  setOrb('',S.chat.mode==='story'?'take your time. tap the mic when you\'re ready':'');
+}
 function speak(text){
   var on=S.boot.settings.voice!==false;
   if(!on){afterSpeak();return;}
@@ -920,7 +922,28 @@ function browserSpeak(text){
   speechSynthesis.speak(u);
 }
 /* storyteller: long listening. Keeps the mic open through pauses until you tap ✓ or say "I'm done". */
-var LONG={on:false,text:'',interim:'',rec:null,bub:null};
+var LONG={on:false,text:'',interim:'',rec:null,bub:null,last:0,timer:null,chimed:false};
+function handsFree(){try{return localStorage.getItem('cc_handsfree')==='1';}catch(e){return false;}}
+function autoSend(){return S.chat&&(S.chat.mode!=='story'||handsFree());}
+function micHintText(c){
+  if(c.mode!=='story')return 'Tap the mic and just talk. When you go quiet for a few seconds I\'ll chime, then answer, then listen again.';
+  return handsFree()?'Hands-free: after each question I start listening. Pause about 5 seconds (a soft chime warns you) or say "I\'m done", and I\'ll answer.'
+                    :'Tap the mic (bottom right) and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.';
+}
+var UNFINISHED=/(\b(and|but|so|or|because|cause|um+|uh+|like|then|the|a|an|to|of|with|that|which|if|when|where|while|until|was|were|is|we|i|my|our)|,|-)\s*$/i;
+function chime(){try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var ctx=chime.ctx||(chime.ctx=new A());[660,880].forEach(function(f,i){var o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(0.0001,ctx.currentTime+i*0.16);g.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+i*0.16+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+i*0.16+0.35);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*0.16);o.stop(ctx.currentTime+i*0.16+0.4);});}catch(e){}}
+function patience(){
+  var t=(LONG.text+' '+LONG.interim).trim();
+  if(/\b(hold on|wait a (second|sec|minute)|give me a (second|sec|minute)|let me think)[.!]?$/i.test(t))return 20000;
+  return UNFINISHED.test(t)?10000:5000;
+}
+function tickLong(){
+  if(!LONG.on||!autoSend())return;
+  var t=(LONG.text+' '+LONG.interim).trim(); if(!t)return;
+  var quiet=Date.now()-LONG.last, need=patience();
+  if(quiet>need-1500&&!LONG.chimed){LONG.chimed=true;chime();setOrb('listening','sending in a moment… keep talking if you\'re not done');}
+  if(quiet>need)finishLong();
+}
 function saveDraft(){try{localStorage.setItem('cc_story_draft',LONG.text);}catch(e){}}
 function showLong(){
   var t=(LONG.text+' '+LONG.interim).trim();
@@ -934,7 +957,8 @@ function startLong(){
   try{LONG.text=localStorage.getItem('cc_story_draft')||LONG.text||'';}catch(e){}
   if($('msg')&&$('msg').value.trim()&&!LONG.text){LONG.text=$('msg').value.trim();$('msg').value='';}
   var b=$('micBtn');if(b){b.classList.add('done');b.innerHTML=I.check;}
-  var h=$('micHint');if(h)h.textContent='I\'m listening, take all the time you need. Tap ✓ or say "I\'m done" when you\'ve finished.';
+  var h=$('micHint');if(h)h.textContent=autoSend()?'I\'m listening. Pause about 5 seconds when you\'re finished (I\'ll chime first), say "I\'m done", or tap ✓.':'I\'m listening, take all the time you need. Tap ✓ or say "I\'m done" when you\'ve finished.';
+  LONG.last=Date.now();LONG.chimed=false;clearInterval(LONG.timer);LONG.timer=setInterval(tickLong,400);
   setOrb('listening','listening…');showLong();runLong();
 }
 function runLong(){
@@ -947,7 +971,7 @@ function runLong(){
       if(e.results[i].isFinal){LONG.text=(LONG.text+' '+t.trim()).trim();saveDraft();}
       else interim+=t;
     }
-    LONG.interim=interim.trim();showLong();
+    LONG.interim=interim.trim();LONG.last=Date.now();if(LONG.chimed){LONG.chimed=false;setOrb('listening','listening…');}showLong();
     if(/\b(i'?m|i am) (all )?done( talking)?[.!]?$/i.test(LONG.text)){LONG.text=LONG.text.replace(/\s*\b(i'?m|i am) (all )?done( talking)?[.!]?$/i,'');finishLong();}
   };
   r.onerror=function(ev){if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){stopLong(false);toast('The microphone is blocked. Allow it in your browser, or tap "Type instead".',5000);}};
@@ -955,12 +979,12 @@ function runLong(){
   try{r.start();}catch(e){}
 }
 function stopLong(keepText){
-  LONG.on=false;
+  LONG.on=false;clearInterval(LONG.timer);LONG.timer=null;
   if(LONG.rec){try{LONG.rec.onend=null;LONG.rec.abort();}catch(e){}LONG.rec=null;}
   if(LONG.interim){LONG.text=(LONG.text+' '+LONG.interim).trim();LONG.interim='';}
   if(LONG.bub){LONG.bub.remove();LONG.bub=null;}
   var b=$('micBtn');if(b){b.classList.remove('done');b.innerHTML=I.mic;}
-  var h=$('micHint');if(h)h.textContent='Tap the mic and talk as long as you like, pauses and all. Tap ✓ (or say "I\'m done") when you\'ve finished.';
+  var h=$('micHint');if(h&&S.chat)h.textContent=micHintText(S.chat);
   if(!keepText){if(LONG.text&&$('msg')){$('msg').value=LONG.text;}LONG.text='';}
 }
 function finishLong(){

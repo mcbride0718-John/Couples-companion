@@ -923,6 +923,14 @@ function browserSpeak(text){
 }
 /* storyteller: long listening. Keeps the mic open through pauses until you tap ✓ or say "I'm done". */
 var LONG={on:false,text:'',interim:'',rec:null,bub:null,last:0,timer:null,chimed:false};
+var WAKE=null;
+function keepAwake(on){
+  try{
+    if(on&&!WAKE&&navigator.wakeLock){navigator.wakeLock.request('screen').then(function(w){WAKE=w;w.addEventListener('release',function(){WAKE=null;});}).catch(function(){});}
+    if(!on&&WAKE){WAKE.release();WAKE=null;}
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.voiceMode)keepAwake(true);});
 function handsFree(){try{return localStorage.getItem('cc_handsfree')==='1';}catch(e){return false;}}
 function autoSend(){return S.chat&&(S.chat.mode!=='story'||handsFree());}
 function micHintText(c){
@@ -959,7 +967,7 @@ function startLong(){
   var b=$('micBtn');if(b){b.classList.add('done');b.innerHTML=I.check;}
   var h=$('micHint');if(h)h.textContent=autoSend()?'I\'m listening. Pause about 5 seconds when you\'re finished (I\'ll chime first), say "I\'m done", or tap ✓.':'I\'m listening, take all the time you need. Tap ✓ or say "I\'m done" when you\'ve finished.';
   LONG.last=Date.now();LONG.chimed=false;clearInterval(LONG.timer);LONG.timer=setInterval(tickLong,400);
-  setOrb('listening','listening…');showLong();runLong();
+  setOrb('listening','listening…');showLong();runLong();keepAwake(true);
 }
 function runLong(){
   if(!LONG.on)return;
@@ -1020,7 +1028,7 @@ function listen(){
   try{recog.start();}catch(e){S.listening=false;}
 }
 function stopVoice(){
-  S.voiceMode=false;
+  S.voiceMode=false;keepAwake(false);
   if(LONG.on)stopLong(false);
   if(recog){try{recog.abort();}catch(e){}recog=null;}S.listening=false;
   stopAudio();

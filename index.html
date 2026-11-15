@@ -738,9 +738,9 @@ function openComposer(type,opt){
   openSheet('<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>'+esc(titles[type])+'</h2><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
     (opt.question?'<div class="q" style="font-size:22px;margin-bottom:10px">'+esc(opt.question)+'</div>':'')+presets+
     '<textarea class="box'+(hand?' handbox':'')+'" id="cText" placeholder="'+esc(ph[type])+'"></textarea>'+
-    '<div class="attach"><button class="chip" id="cVoice">'+I.mic+' Voice note</button><button class="chip" id="cVideo">'+I.video+' Video</button><button class="chip" id="cPhoto">'+I.cam+' Photo</button></div>'+
+    '<div class="attach"><button class="chip" id="cVoice">'+I.mic+' Voice note</button><button class="chip" id="cVideo">'+I.video+' Video</button><button class="chip" id="cCam">'+I.cam+' Take a photo</button><button class="chip" id="cPhoto">'+I.photo+' From photos</button></div>'+
     '<div id="cRec"></div><div class="pending" id="cPend"></div>'+
-    '<input type="file" id="fVideo" accept="video/*" capture="user" class="hidden"><input type="file" id="fPhoto" accept="image/*" class="hidden"><input type="file" id="fAudio" accept="audio/*" capture class="hidden">'+
+    '<input type="file" id="fVideo" accept="video/*" capture="user" class="hidden"><input type="file" id="fPhoto" accept="image/*" class="hidden"><input type="file" id="fCam" accept="image/*" capture="environment" class="hidden"><input type="file" id="fAudio" accept="audio/*" capture class="hidden">'+
     (type==='letter'?'<label class="toggle" style="margin:4px 0 6px"><span class="sw" id="cRes"></span>Keep in reserve</label><div class="muted small" style="margin-bottom:8px">Reserve letters stay hidden and are delivered one at a time, so '+esc(nm(p))+' always has a sealed letter waiting.</div>':'')+
     '<div class="row" style="justify-content:space-between;margin-top:6px">'+(canPriv?'<label class="toggle"><span class="sw" id="cPriv"></span>Just for me</label>':'<span class="muted small">'+(type==='letter'?esc(nm(p))+' sees only the title until '+(p==='heidi'?'she':'he')+' opens it.':type==='note'?'Just for '+esc(nm(p))+'.':'Shared with '+esc(nm(p))+'.')+'</span>')+
     '<button class="btn" id="cSend">'+(type==='note'?I.send+' Send':type==='letter'?I.mail+' Seal it':'Save')+'</button></div>');
@@ -758,6 +758,8 @@ function openComposer(type,opt){
   }
   $('cVideo').onclick=function(){$('fVideo').click();};
   $('cPhoto').onclick=function(){$('fPhoto').click();};
+  $('cCam').onclick=function(){$('fCam').click();};
+  $('fCam').onchange=function(){var f=this.files[0];if(!f)return;shrinkImage(f).then(function(u){addPending('photo',u,'image/jpeg');});this.value='';};
   $('fVideo').onchange=function(){var f=this.files[0];if(!f)return;if(f.size>25*1024*1024){toast('That video is too long. Try about a minute.',4000);return;}fileToDataUrl(f).then(function(u){addPending('video',u,f.type);});this.value='';};
   $('fPhoto').onchange=function(){var f=this.files[0];if(!f)return;shrinkImage(f).then(function(u){addPending('photo',u,'image/jpeg');});this.value='';};
   $('fAudio').onchange=function(){var f=this.files[0];if(!f)return;fileToDataUrl(f).then(function(u){addPending('voice',u,f.type);});this.value='';};

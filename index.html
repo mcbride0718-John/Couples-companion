@@ -226,6 +226,17 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .mo .pl{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px}
 .mo .det{white-space:pre-wrap;color:var(--ink);font-size:15px}
 .mo .by{font-size:12px;color:var(--muted);margin-top:8px}
+.recchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.recchip{font-size:12px;padding:5px 10px;background:rgba(233,160,59,.16);border-color:transparent;color:var(--deep)}
+.recchip svg{width:12px;height:12px}
+.reccard .ttl{font-family:Fraunces,serif;font-weight:650;font-size:19px;color:var(--deep);margin:2px 0 6px}
+.reccard ul,.recview ul{margin:6px 0 0;padding-left:20px}
+.reccard li,.recview li{margin:3px 0}
+.recview .story{font-family:Fraunces,Georgia,serif;font-size:17px;line-height:1.6;white-space:pre-wrap;color:var(--ink)}
+.recview .raw{white-space:pre-wrap;font-size:14px;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:8px}
+.qcard{background:linear-gradient(135deg,#fff7ec,#fde3cf)}
+.levelring{position:absolute;inset:-10px;border-radius:50%;border:4px solid rgba(210,69,95,.45);transform:scale(1);transition:transform .08s linear;pointer-events:none}
+.rectime{font-weight:800;color:#b23a52;font-size:14px;text-align:center;margin-top:6px;min-height:18px}
 .storyhero{background:linear-gradient(135deg,#fff7ec,#fde3cf)}
 .lettershow{background:#fffdf7;border-radius:10px;padding:24px 20px;box-shadow:var(--shadow);position:relative;animation:unfold .6s ease}
 @keyframes unfold{from{transform:scaleY(.2) translateY(40px);opacity:0}to{transform:none;opacity:1}}
@@ -428,6 +439,7 @@ function go(tab){
   stopVoice();
   if($('sheet').classList.contains('open'))closeSheet();
   if(tab!=='talk'&&S.chat&&S.chat.readOnly)S.chat=null;
+  if(tab!=='story'&&S.rec&&!S.rec.busy)S.rec=null;
   S.tab=tab;
   $('tabs').classList.remove('hidden');
   setNav(tab);
@@ -582,20 +594,23 @@ function openLetter(e){
 
 /* ---------------- our story ---------------- */
 function renderStory(){
-  if(S.chat&&S.chat.mode==='story'){drawChat();return;}
+  if(S.rec){drawRecorder();return;}
   var v=$('view'), p=partner();
   v.innerHTML=topbar('Our Story','The McBride memoir, written together')+
     '<div class="card storyhero">'+tape(2)+'<div class="eyebrow">'+I.route+' How we got here</div>'+
       '<div class="q" style="margin-bottom:12px">Tell me your story, and I\'ll ask the questions that bring the memories back.</div>'+
-      '<div class="row"><button class="btn" id="sTell">'+I.mic+' Tell our story</button><button class="btn soft" id="sAdd">'+I.plus+' Add a moment</button></div>'+
+      '<div class="row"><button class="btn" id="sTell">'+I.mic+' Tell our story</button><button class="btn soft" id="sTogether">👫 Remember together</button><button class="btn soft" id="sAdd">'+I.plus+' Add a moment</button></div>'+
       '<div style="margin-top:6px"><button class="btn ghost small" id="sFresh">Start a fresh session</button></div></div>'+
     '<div id="tline"><div class="empty"><span class="spinner"></span></div></div>';
-  $('sTell').onclick=function(){unlockAudio();startChat('story');};
-  $('sFresh').onclick=function(){unlockAudio();startChat('story',null,true);};
+  $('sTell').onclick=function(){unlockAudio();startRecorder('solo');};
+  $('sFresh').onclick=function(){unlockAudio();startRecorder('solo',null,true);};
+  $('sTogether').onclick=function(){unlockAudio();startRecorder('together');};
   $('sAdd').onclick=function(){openMoment(null);};
   api('api_story').then(function(r){
     var box=$('tline');if(!box)return;
-    var ms=r.moments||[];S.moments=ms;
+    var ms=r.moments||[];S.moments=ms;S.recordings=r.recordings||[];
+    var recById={};S.recordings.forEach(function(x){recById[x.id]=x;});
+    if(!ms.length&&S.recordings.length){box.innerHTML='<div class="sectionhead"><span class="hand">Our voices</span></div>';S.recordings.forEach(function(r,i){box.appendChild(recCard(r,i));});return;}
     if(!ms.length){box.innerHTML='<div class="card empty">'+tape(0)+'<div class="big">📖</div><div class="serif">Every love story has a first chapter</div>Tap <b>Tell our story</b> and just start talking: how you met, when you married, where life took you. I\'ll write it down and ask about the rest. '+esc(nm(p))+' can add to it from '+(p==='heidi'?'her':'his')+' phone too.</div>';return;}
     var tl=document.createElement('div');tl.className='tl';var lastYr=null;
     ms.forEach(function(m,i){
@@ -604,11 +619,16 @@ function renderStory(){
       var c=document.createElement('button');c.className='card mo';
       var det=m.details||'';var short=det.length>260?det.slice(0,260)+'…':det;
       c.innerHTML=tape(i,i%2?'r':'l')+(m.when?'<div class="when">'+esc(m.when)+'</div>':'')+'<div class="ttl">'+esc(m.title)+'</div>'+(m.place?'<div class="pl">📍 '+esc(m.place)+'</div>':'')+(short?'<div class="det">'+esc(short)+'</div>':'')+
-        '<div class="by">Added by '+esc(nm(m.addedBy))+(m.updatedBy&&m.updatedBy!==m.addedBy?' · added to by '+esc(nm(m.updatedBy)):'')+'</div>';
-      c.onclick=function(){openMoment(m);};
+        '<div class="by">Added by '+esc(nm(m.addedBy))+(m.updatedBy&&m.updatedBy!==m.addedBy?' · added to by '+esc(nm(m.updatedBy)):'')+'</div>'+
+        ((m.recordings||[]).filter(function(id){return recById[id];}).length?'<div class="recchips">'+(m.recordings||[]).filter(function(id){return recById[id];}).map(function(id){var r=recById[id];return '<span class="chip recchip" data-r="'+id+'">'+I.play+' '+esc(recWho(r))+(r.seconds?' · '+fmtDur(r.seconds):'')+'</span>';}).join('')+'</div>':'');
+      c.onclick=function(ev){var rc=ev.target.closest&&ev.target.closest('[data-r]');if(rc){ev.stopPropagation();openRecording(recById[rc.getAttribute('data-r')]);return;}openMoment(m);};
       tl.appendChild(c);
     });
     box.innerHTML='';box.appendChild(tl);
+    if(S.recordings.length){
+      var h=document.createElement('div');h.className='sectionhead';h.innerHTML='<span class="hand">Our voices</span><span class="muted small">'+S.recordings.length+' recording'+(S.recordings.length>1?'s':'')+'</span>';box.appendChild(h);
+      S.recordings.forEach(function(r,i){box.appendChild(recCard(r,i));});
+    }
   }).catch(function(e){$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
 }
 function openMoment(m){
@@ -628,7 +648,170 @@ function openMoment(m){
       .catch(function(e){toast(errMsg(e));btn.disabled=false;});
   };
   if($('mDel'))$('mDel').onclick=function(){if(!confirm('Remove "'+m.title+'" from your story?'))return;api('api_deleteMoment',m.id).then(function(){closeSheet();toast('Removed');renderStory();wireGear();});};
-  if($('mTalk'))$('mTalk').onclick=function(){closeSheet();unlockAudio();startChat('story','__moment__'+m.title+(m.when?' ('+m.when+')':''));};
+  if($('mTalk'))$('mTalk').onclick=function(){closeSheet();unlockAudio();startRecorder('solo','I\'d like to tell more about "'+m.title+(m.when?' ('+m.when+')':'')+'" in our story. Ask me about it.');};
+}
+
+/* ---------------- story recordings ---------------- */
+function fmtDur(s){s=Math.round(s||0);return Math.floor(s/60)+':'+('0'+s%60).slice(-2);}
+function recWho(r){return r.mode==='together'?nm('john')+' & '+nm('heidi'):nm(r.by);}
+function recCard(r,i){
+  var d=document.createElement('div');d.className='card reccard';
+  d.innerHTML=tape(i||0)+'<div class="meta" style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted)"><span>🎙 '+esc(recWho(r))+(r.seconds?' · '+fmtDur(r.seconds):'')+'</span><span>'+ago(r.createdAt)+'</span></div>'+
+    '<div class="ttl">'+esc(r.title)+'</div>'+((r.when||r.place)?'<div class="pl">'+esc([r.when,r.place].filter(Boolean).join(' · '))+'</div>':'')+
+    ((r.highlights||[]).length?'<ul>'+r.highlights.slice(0,3).map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul>':'')+
+    '<div class="row" style="margin-top:10px">'+((r.audio||[]).length?'<button class="btn soft" data-a="play">'+I.play+' Listen</button>':'')+'<button class="btn ghost" data-a="read">Read the story</button></div>';
+  var pb=d.querySelector('[data-a=play]');if(pb)pb.onclick=function(){playRecording(r,pb);};
+  d.querySelector('[data-a=read]').onclick=function(){openRecording(r);};
+  return d;
+}
+/* plays a recording's pieces one after another */
+var rplayer=new Audio();
+function playRecording(r,btn){
+  if(rplayer._rec===r.id&&!rplayer.paused){rplayer.pause();if(btn)btn.innerHTML=I.play+' Listen';return;}
+  var parts=(r.audio||[]).slice(),i=0;rplayer._rec=r.id;
+  function next(){
+    if(i>=parts.length){if(btn)btn.innerHTML=I.play+' Listen';return;}
+    if(btn)btn.innerHTML='<span class="spinner" style="width:14px;height:14px"></span> Loading';
+    loadMediaUrl(parts[i].id).then(function(u){rplayer.src=u;rplayer.onended=function(){i++;next();};rplayer.play();if(btn)btn.innerHTML=I.stop+' Pause';})
+      .catch(function(e){toast(errMsg(e));if(btn)btn.innerHTML=I.play+' Listen';});
+  }
+  next();
+}
+function openRecording(r){
+  if(!r)return;
+  var canDel=r.mode==='together'||r.by===S.boot.me;
+  openSheet('<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="muted small">🎙 '+esc(recWho(r))+' · '+ago(r.createdAt)+(r.seconds?' · '+fmtDur(r.seconds):'')+'</span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    '<div class="recview"><h2>'+esc(r.title)+'</h2>'+((r.when||r.place)?'<div class="pl" style="margin:4px 0 10px;font-weight:700;color:var(--muted)">'+esc([r.when,r.place].filter(Boolean).join(' · '))+'</div>':'')+
+    (r.question?'<div class="qline" style="font-family:Fraunces,serif;font-style:italic;color:var(--accent);margin-bottom:10px">“'+esc(r.question)+'”</div>':'')+
+    ((r.audio||[]).length?'<button class="btn" id="rvPlay" style="margin-bottom:14px">'+I.play+' Listen to '+(r.mode==='together'?'you two':esc(nm(r.by)))+'</button>':'')+
+    '<div class="story">'+esc(r.story)+'</div>'+
+    ((r.highlights||[]).length?'<div class="eyebrow" style="margin-top:16px">Worth remembering</div><ul>'+r.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul>':'')+
+    (r.transcript?'<div style="margin-top:16px"><button class="btn ghost small" id="rvRaw">Show exactly what was said</button><div class="raw hidden" id="rvRawT">'+esc(r.transcript)+'</div></div>':'')+
+    (canDel?'<div style="margin-top:14px"><button class="btn ghost small" id="rvDel">'+I.trash+' Remove this recording</button></div>':'')+'</div>');
+  $('cX').onclick=function(){rplayer.pause();closeSheet();};
+  if($('rvPlay'))$('rvPlay').onclick=function(){playRecording(r,$('rvPlay'));};
+  if($('rvRaw'))$('rvRaw').onclick=function(){$('rvRawT').classList.toggle('hidden');this.textContent=$('rvRawT').classList.contains('hidden')?'Show exactly what was said':'Hide the exact words';};
+  if($('rvDel'))$('rvDel').onclick=function(){if(!confirm('Remove this recording and its audio for good? The timeline moments stay.'))return;api('api_deleteRecording',r.id).then(function(){rplayer.pause();closeSheet();toast('Removed');if(S.tab==='story'){renderStory();wireGear();}}).catch(function(e){toast(errMsg(e));});};
+}
+
+/* The recorder: saves your real voice in pieces as you talk, then organizes it */
+var RECS={on:false};
+RECS.pick=function(){var t=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'];for(var i=0;i<t.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t[i]))return t[i];}return '';};
+RECS.start=function(){
+  if(RECS.on||!S.rec||S.rec.busy)return;
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser can\'t record audio. Tap "Type instead".',4500);return;}
+  stopAudio();S.voiceMode=true;
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(stream){
+    RECS.on=true;RECS.stream=stream;RECS.session=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    RECS.idx=0;RECS.discard=false;RECS.chain=Promise.resolve();RECS.t0=Date.now();RECS.segT0=Date.now();RECS.lastVoice=Date.now();RECS.heard=false;RECS.chimed=false;RECS.floor=0.01;RECS.failed=0;
+    RECS.mime=RECS.pick();
+    try{var A=window.AudioContext||window.webkitAudioContext;RECS.ctx=new A();var src=RECS.ctx.createMediaStreamSource(stream);RECS.an=RECS.ctx.createAnalyser();RECS.an.fftSize=1024;src.connect(RECS.an);RECS.buf=new Float32Array(RECS.an.fftSize);}catch(e){RECS.an=null;}
+    RECS.seg();
+    RECS.segTimer=setInterval(function(){if(RECS.on)RECS.seg();},4*60*1000);   // a new safe piece every 4 minutes
+    RECS.loop();keepAwake(true);
+    drawRecButton();setOrb('listening',S.rec.mode==='together'?'recording you both…':'listening…');
+  }).catch(function(){toast('The microphone is blocked. Allow it in your browser settings, or tap "Type instead".',5000);});
+};
+RECS.seg=function(){
+  var old=RECS.mr, idx=RECS.idx++, started=RECS.segT0;RECS.segT0=Date.now();
+  var mr=new MediaRecorder(RECS.stream,RECS.mime?{mimeType:RECS.mime,audioBitsPerSecond:24000}:{audioBitsPerSecond:24000});
+  var chunks=[];mr.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+  mr.onstop=function(){var secs=(Date.now()-mr._t0)/1000;if(!chunks.length||RECS.discard)return;RECS.upload(new Blob(chunks,{type:mr.mimeType||RECS.mime||'audio/webm'}),mr._idx,secs);};
+  mr._idx=idx;mr._t0=Date.now();mr.start(1000);RECS.mr=mr;
+  if(old&&old.state!=='inactive')old.stop();
+};
+RECS.upload=function(blob,idx,secs){
+  var session=RECS.session, mode=S.rec?S.rec.mode:'solo';
+  RECS.chain=RECS.chain.then(function(){
+    return fileToDataUrl(blob).then(function(u){
+      var tries=0;
+      function go(){return api('api_storyPart',session,idx,u,secs,mode).catch(function(e){if(++tries<3)return new Promise(function(r){setTimeout(r,2500);}).then(go);RECS.failed++;toast('One piece of audio didn\'t save: '+errMsg(e),5000);});}
+      return go();
+    });
+  });
+};
+RECS.loop=function(){
+  if(!RECS.on)return;
+  var lvl=0;
+  if(RECS.an){RECS.an.getFloatTimeDomainData(RECS.buf);var sum=0;for(var i=0;i<RECS.buf.length;i++)sum+=RECS.buf[i]*RECS.buf[i];lvl=Math.sqrt(sum/RECS.buf.length);}
+  var now=Date.now();
+  RECS.floor=Math.min(Math.max(RECS.floor*0.995+lvl*0.005,0.003),0.05);
+  if(lvl>Math.max(RECS.floor*2.5,0.015)){RECS.lastVoice=now;RECS.heard=true;if(RECS.chimed){RECS.chimed=false;setOrb('listening','listening…');}}
+  var ring=$('lvlRing');if(ring)ring.style.transform='scale('+(1+Math.min(lvl*6,0.45))+')';
+  var t=$('recTime');if(t)t.textContent=(S.rec&&S.rec.mode==='together'?'Recording you both · ':'Recording · ')+fmtDur((now-RECS.t0)/1000);
+  if(S.rec&&S.rec.mode==='solo'&&handsFree()&&RECS.heard){
+    var quiet=now-RECS.lastVoice;
+    if(quiet>4500&&!RECS.chimed){RECS.chimed=true;chime();setOrb('listening','sending in a moment… keep talking if you\'re not done');}
+    if(quiet>6500){RECS.finish();return;}
+  }
+  requestAnimationFrame(RECS.loop);
+};
+RECS.finish=function(){
+  if(!RECS.on)return;
+  RECS.on=false;clearInterval(RECS.segTimer);keepAwake(false);
+  var session=RECS.session, rec=S.rec, secs=(Date.now()-RECS.t0)/1000;
+  var mr=RECS.mr;RECS.mr=null;
+  if(secs<2)RECS.discard=true;   // a tap by mistake: don't keep it
+  var stopped=new Promise(function(res){if(mr&&mr.state!=='inactive'){var o=mr.onstop;mr.onstop=function(){o&&o();res();};mr.stop();}else res();});
+  stopped.then(function(){try{RECS.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}try{RECS.ctx&&RECS.ctx.close();}catch(e){}});
+  if(!rec)return;
+  if(secs<2){rec.busy=false;drawRecButton();setOrb('','');return;}
+  processRecording(rec,session,stopped.then(function(){return RECS.chain;}),'');
+};
+function processRecording(rec,session,ready,text){
+  rec.busy=true;drawRecButton();
+  var steps=['Saving your voice…','Writing down your words…','Organizing your story…','Adding it to our timeline…'],k=0;
+  setOrb('thinking',steps[0]);var st=setInterval(function(){k=Math.min(k+1,steps.length-1);if(S.rec===rec&&S.tab==='story')setOrb('thinking',steps[k]);},6000);
+  ready.then(function(){return api('api_storyFinish',session,{mode:rec.mode,question:rec.question,text:text});})
+    .then(function(r){
+      clearInterval(st);rec.busy=false;
+      rec.results.unshift(r.recording);
+      var n=[];if(r.added)n.push(r.added+' new moment'+(r.added>1?'s':''));if(r.updated)n.push(r.updated+' updated');
+      toast('📖 Saved to our story'+(n.length?': '+n.join(', '):''),3500);celebrate(16);
+      if(r.reply&&rec.mode==='solo')rec.question=r.reply;else if(r.reply)rec.idea=r.reply;
+      if(S.rec===rec&&S.tab==='story'){drawRecorder();if(rec.mode==='solo'&&r.reply)speak(r.reply);else setOrb('','');}
+    })
+    .catch(function(e){clearInterval(st);rec.busy=false;if(S.rec===rec&&S.tab==='story'){drawRecButton();setOrb('','');}toast(errMsg(e)+' Your voice is saved; open Our Story later to finish it.',6500);});
+}
+function startRecorder(mode,opener,fresh){
+  stopVoice();
+  S.chat=null;S.rec={mode:mode,question:'',results:[],busy:false};
+  S.tab='story';setNav('story');$('fab').classList.add('hidden');window.scrollTo(0,0);
+  drawRecorder();wireGear();
+  if(mode==='solo'){
+    S.rec.busy=true;drawRecButton();setOrb('thinking','thinking of a question…');var rec=S.rec;
+    api('api_storyChat',opener||'',!!fresh).then(function(r){rec.busy=false;rec.question=r.reply;if(S.rec===rec&&S.tab==='story'){drawRecorder();speak(r.reply);}})
+      .catch(function(e){rec.busy=false;if(S.rec===rec&&S.tab==='story'){drawRecorder();}toast(errMsg(e),4500);});
+  }
+}
+function drawRecButton(){
+  var b=$('recBtn');if(!b)return;var rec=S.rec;
+  b.classList.toggle('done',RECS.on);b.disabled=!!(rec&&rec.busy);
+  b.innerHTML=(RECS.on?'<span class="levelring" id="lvlRing"></span>'+I.check:rec&&rec.busy?'<span class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>':I.mic);
+  var h=$('recHint');if(h)h.textContent=RECS.on?(rec.mode==='solo'&&handsFree()?'Recording. Pause about 6 seconds when you\'re done (I\'ll chime first), or tap ✓.':'Recording your voice. Take all the time you need, then tap ✓.'):
+    rec&&rec.busy?'Working on it…':(rec&&rec.mode==='together'?'Tap the mic and just talk and laugh together. I\'ll keep the notes. Tap ✓ when you\'re done.':'Tap the mic (bottom right) when you\'re ready. Ramble all you like; I\'ll tidy it up.');
+  var t=$('recTime');if(t&&!RECS.on)t.textContent='';
+}
+function drawRecorder(){
+  var rec=S.rec, v=$('view'), voiceOn=S.boot.settings.voice!==false, solo=rec.mode==='solo';
+  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><span class="row" style="gap:14px"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label>'+(solo?'<label class="toggle"><span class="sw'+(handsFree()?' on':'')+'" id="hfSw"></span>Hands-free</label>':'')+'</span><button class="btn soft" id="recDone">See our timeline</button></div></div>'+
+    '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(rec.busy?' thinking':'')+'"></div><div class="orbname">'+(solo?'Our storyteller':'Remembering together')+'</div><div class="orbstate"></div><div class="rectime" id="recTime"></div><div class="muted small" id="recHint" style="text-align:center;padding:0 16px"></div></div>'+
+    (solo&&rec.question?'<div class="card qcard">'+tape(1)+'<div class="eyebrow">'+I.sparkle+' Your storyteller asks</div><div class="q" style="margin-bottom:8px">'+esc(rec.question)+'</div><button class="btn ghost small" id="recSkip">'+I.refresh+' Ask me something else</button></div>':'')+
+    (!solo?'<div class="card qcard">'+tape(1)+'<div class="eyebrow">👫 Just the two of you</div><div class="q" style="margin-bottom:0">Put the phone between you, tap the mic, and remember out loud. Laugh, interrupt each other, wander off topic. I\'ll write it up afterward and note who said what.'+(rec.idea?'<br><br><span style="font-size:18px">Next time, maybe: '+esc(rec.idea)+'</span>':'')+'</div></div>':'')+
+    '<div id="recResults"></div>'+
+    '<div class="composer hidden" id="recComp"><textarea id="recText" rows="2" placeholder="Rather type? Write it here…"></textarea><button class="round primary" id="recSend" aria-label="Send">'+I.send+'</button></div>'+
+    '<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="recKb">'+I.kb+' Type instead</button></div><div style="height:100px"></div>'+
+    '<button class="bigmic floating" id="recBtn" aria-label="Record">'+I.mic+'</button>';
+  rec.results.forEach(function(r,i){$('recResults').appendChild(recCard(r,i));});
+  drawRecButton();
+  $('spk').onclick=function(){var on=!(S.boot.settings.voice!==false);S.boot.settings.voice=on;this.classList.toggle('on',on);if(!on)stopAudio();api('api_setSettings',{voice:on});};
+  if($('hfSw'))$('hfSw').onclick=function(){var on=!handsFree();try{localStorage.setItem('cc_handsfree',on?'1':'');}catch(e){}this.classList.toggle('on',on);drawRecButton();toast(on?'Hands-free on: after each question I\'ll start recording on my own':'Hands-free off: tap the mic when you\'re ready',3200);};
+  $('recDone').onclick=function(){if(RECS.on)RECS.finish();var r=S.rec;if(r&&r.busy){toast('Still saving your story… it will show up on the timeline in a moment.',3500);}S.rec=null;renderStory();wireGear();};
+  if($('recSkip'))$('recSkip').onclick=function(){if(rec.busy||RECS.on)return;rec.busy=true;drawRecButton();setOrb('thinking','thinking of another question…');api('api_storyChat','Could you ask me something different?',false).then(function(r){rec.busy=false;rec.question=r.reply;if(S.rec===rec&&S.tab==='story'){drawRecorder();speak(r.reply);}}).catch(function(e){rec.busy=false;drawRecButton();toast(errMsg(e));});};
+  $('recBtn').onclick=function(){unlockAudio();if(RECS.on){RECS.finish();return;}if(rec.busy)return;stopAudio();RECS.start();};
+  $('recKb').onclick=function(){$('recComp').classList.toggle('hidden');if(!$('recComp').classList.contains('hidden'))$('recText').focus();};
+  $('recSend').onclick=function(){var t=$('recText').value.trim();if(!t||rec.busy)return;$('recText').value='';$('recComp').classList.add('hidden');processRecording(rec,'typed'+Date.now().toString(36),Promise.resolve(),t);};
+  if(rec.busy)setOrb('thinking','');
 }
 
 /* ---------------- journal ---------------- */
@@ -914,6 +1097,7 @@ function endChat(){
 function stopAudio(){try{player.pause();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();S.speaking=false;}
 function afterSpeak(){
   S.speaking=false;
+  if(S.rec){setOrb('',RECS.on?'':S.rec.mode==='solo'?'take your time. tap the mic when you\'re ready':'');if(S.rec.mode==='solo'&&handsFree()&&S.voiceMode&&!RECS.on&&!S.rec.busy)setTimeout(function(){if(S.rec&&!S.rec.busy&&!RECS.on&&!S.speaking)RECS.start();},600);return;}
   if(!S.chat||S.chat.busy)return;
   var auto=S.voiceMode&&(S.chat.mode!=='story'||handsFree());
   if(auto&&$('micBtn')){setTimeout(function(){if(S.chat&&!S.chat.busy&&!S.speaking&&S.voiceMode)startLong();},600);return;}
@@ -926,7 +1110,7 @@ function speak(text){
     setOrb('thinking','finding my voice…');
     api('api_speak',text).then(function(url){
       if(!url){browserSpeak(text);return;}
-      if(!S.chat)return;
+      if(!S.chat&&!S.rec)return;
       S.speaking=true;setOrb('speaking','');
       player.onended=player.onerror=function(){afterSpeak();};
       player.src=url;var p=player.play();if(p&&p.catch)p.catch(function(){afterSpeak();});
@@ -1056,6 +1240,7 @@ function listen(){
 }
 function stopVoice(){
   S.voiceMode=false;keepAwake(false);
+  if(typeof RECS!=='undefined'&&RECS.on)RECS.finish();
   if(LONG.on)stopLong(false);
   if(recog){try{recog.abort();}catch(e){}recog=null;}S.listening=false;
   stopAudio();

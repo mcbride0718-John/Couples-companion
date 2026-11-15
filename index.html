@@ -125,11 +125,12 @@ label.lbl{display:block;font-weight:800;font-size:14px;margin:14px 0 6px}
 .empty .big{font-size:38px;margin-bottom:6px}
 .envs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
 .env{position:relative;aspect-ratio:1.45;border-radius:8px;background:linear-gradient(160deg,#fbe9d2,#f3d3b0);box-shadow:var(--shadow);overflow:hidden;text-align:center;padding:10px}
-.env:before{content:"";position:absolute;left:0;right:0;top:0;height:58%;background:linear-gradient(160deg,#f6dcbc,#eec39b);clip-path:polygon(0 0,100% 0,50% 100%);z-index:1}
-.env .seal{position:absolute;left:50%;top:58%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e0705a,#a3322a 70%);box-shadow:0 2px 6px rgba(0,0,0,.25),inset 0 0 0 3px rgba(255,255,255,.12);display:grid;place-items:center;color:#ffd7c4;z-index:2}
+.env:before{content:"";position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(160deg,#f6dcbc,#eec39b);clip-path:polygon(0 0,100% 0,50% 100%);z-index:1}
+.env .seal{position:absolute;left:50%;top:40%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e0705a,#a3322a 70%);box-shadow:0 2px 6px rgba(0,0,0,.25),inset 0 0 0 3px rgba(255,255,255,.12);display:grid;place-items:center;color:#ffd7c4;z-index:2}
 .env .seal svg{width:18px;height:18px}
-.env .t{position:absolute;left:8px;right:8px;bottom:7px;font-family:Caveat,cursive;font-size:19px;line-height:1.05;color:var(--deep);z-index:2}
+.env .t{position:absolute;left:8px;right:8px;bottom:6px;font-family:Caveat,cursive;font-size:17px;line-height:1.05;color:var(--deep);z-index:2}
 .env.opened{opacity:.85}.env.opened .seal{background:radial-gradient(circle at 35% 30%,#d9b07a,#a87b45 70%)}
+.env.auto .seal{background:radial-gradient(circle at 35% 30%,#f7d77a,#c9952c 70%)}
 .env.mine .seal{background:radial-gradient(circle at 35% 30%,#a8b97a,#5e7040 70%)}
 .env.wiggle{animation:wig 2.6s ease-in-out infinite}
 @keyframes wig{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-2.5deg)}95%{transform:rotate(2.5deg)}}
@@ -517,7 +518,7 @@ function renderLove(){
     '<div class="card">'+tape(0)+'<div class="eyebrow">'+I.heart+' Shower '+esc(nm(p))+' with love</div>'+
     '<div class="row"><button class="btn" id="lnText">'+I.pen+' Write</button><button class="btn soft" id="lnVoice">'+I.mic+' Voice</button><button class="btn soft" id="lnVideo">'+I.video+' Video</button></div>'+
     '<div class="row" style="margin-top:10px"><button class="btn soft" id="lnLetter">'+I.mail+' Seal an "Open when…" letter</button></div></div>'+
-    '<div class="sectionhead"><span class="hand">Open when…</span></div><div id="letters"></div>'+
+    '<div class="sectionhead"><span class="hand">Open when…</span>'+(S.boot.me==='john'?'<span class="muted small">'+S.boot.reserveLetters+' in reserve</span>':'')+'</div><div id="letters"></div>'+
     '<div class="sectionhead"><span class="hand">Love notes</span></div><div id="notes"><div class="empty"><span class="spinner"></span></div></div>';
   $('lnText').onclick=function(){openComposer('note');};
   $('lnVoice').onclick=function(){openComposer('note',{autoVoice:true});};
@@ -531,8 +532,11 @@ function renderLove(){
       var g=document.createElement('div');g.className='envs';
       letters.forEach(function(e){
         var el=document.createElement('button');
-        el.className='env'+(e.mine?' mine':'')+(e.openedAt&&!e.mine?' opened':'')+(e.sealed?' wiggle':'');
-        el.innerHTML='<span class="seal">'+I.heartFill+'</span><span class="t">'+esc(e.title)+'<br><span style="font-size:15px;opacity:.75">'+(e.mine?'for '+esc(nm(e.to))+(e.openedAt?' · opened':' · sealed'):'from '+esc(nm(e.author))+(e.sealed?'':' · opened'))+'</span></span>';
+        el.className='env'+(e.mine&&!e.fromCompanion?' mine':'')+(e.openedAt&&!e.mine?' opened':'')+(e.sealed?' wiggle':'')+(e.fromCompanion?' auto':'');
+        var who=e.fromCompanion?'from your companion':(e.mine?'for '+esc(nm(e.to)):'from '+esc(nm(e.author)));
+        var st=e.queued?' · in reserve':e.openedAt?' · opened':' · sealed';
+        el.innerHTML='<span class="seal">'+I.heartFill+'</span><span class="t">'+esc(e.title)+'<br><span style="font-size:15px;opacity:.75">'+who+st+'</span></span>';
+        if(e.queued)el.style.opacity='.7';
         el.onclick=function(){openLetter(e);};
         g.appendChild(el);
       });
@@ -546,9 +550,9 @@ function renderLove(){
 }
 function openLetter(e){
   var show=function(x){
-    openSheet('<div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="muted small">'+(x.mine?'Your letter for '+esc(nm(x.to)):'From '+esc(nm(x.author)))+'</span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    openSheet('<div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="muted small">'+(x.fromCompanion?'From your companion, with '+esc(nm(x.author))+'\'s own words':x.mine?'Your letter for '+esc(nm(x.to)):'From '+esc(nm(x.author)))+'</span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
       '<div class="lettershow">'+tape(0)+'<div class="t">'+esc(x.title)+'</div><div class="text">'+esc(x.text)+'</div><div class="media" id="lmedia"></div></div>'+
-      (x.mine?'<p class="muted small" style="margin-top:14px">'+(x.openedAt?esc(nm(x.to))+' opened this '+ago(x.openedAt)+'.':'Still sealed. '+esc(nm(x.to))+' will see only the title until '+(x.to==='heidi'?'she':'he')+' opens it.')+'</p>':''));
+      (x.mine?'<p class="muted small" style="margin-top:14px">'+(x.queued?'In reserve. It will be delivered when '+esc(nm(x.to))+' has no other sealed letter waiting.':x.openedAt?esc(nm(x.to))+' opened this '+ago(x.openedAt)+'.':'Still sealed. '+esc(nm(x.to))+' will see only the title until '+(x.to==='heidi'?'she':'he')+' opens it.')+'</p>':''));
     $('cX').onclick=closeSheet;
     (x.media||[]).forEach(function(m){$('lmedia').appendChild(mediaEl(m,true));});
   };
@@ -649,7 +653,7 @@ function entryEl(e,opt){
   d.className='card entry'+(e.type==='note'?' note-card':'')+(e.type==='memory'?' mem':'');
   var hearts=e.hearts||{}, other=e.author===S.boot.me?partner():S.boot.me;
   var heartOn=!!hearts[S.boot.me], heartOther=!!hearts[other];
-  var whoLine = (e.type==='note'||e.type==='letter') ? esc(nm(e.author))+' → '+esc(nm(e.to)) : esc(nm(e.author));
+  var whoLine = e.fromCompanion ? 'Your companion → '+esc(nm(e.to)) : (e.type==='note'||e.type==='letter') ? esc(nm(e.author))+' → '+esc(nm(e.to)) : esc(nm(e.author));
   var body='';
   if(e.question)body+='<div class="qline">'+esc(e.question)+'</div>';
   if(e.type==='chat'){
@@ -719,12 +723,14 @@ function openComposer(type,opt){
     '<div class="attach"><button class="chip" id="cVoice">'+I.mic+' Voice note</button><button class="chip" id="cVideo">'+I.video+' Video</button><button class="chip" id="cPhoto">'+I.cam+' Photo</button></div>'+
     '<div id="cRec"></div><div class="pending" id="cPend"></div>'+
     '<input type="file" id="fVideo" accept="video/*" capture="user" class="hidden"><input type="file" id="fPhoto" accept="image/*" class="hidden"><input type="file" id="fAudio" accept="audio/*" capture class="hidden">'+
+    (type==='letter'?'<label class="toggle" style="margin:4px 0 6px"><span class="sw" id="cRes"></span>Keep in reserve</label><div class="muted small" style="margin-bottom:8px">Reserve letters stay hidden and are delivered one at a time, so '+esc(nm(p))+' always has a sealed letter waiting.</div>':'')+
     '<div class="row" style="justify-content:space-between;margin-top:6px">'+(canPriv?'<label class="toggle"><span class="sw" id="cPriv"></span>Just for me</label>':'<span class="muted small">'+(type==='letter'?esc(nm(p))+' sees only the title until '+(p==='heidi'?'she':'he')+' opens it.':type==='note'?'Just for '+esc(nm(p))+'.':'Shared with '+esc(nm(p))+'.')+'</span>')+
     '<button class="btn" id="cSend">'+(type==='note'?I.send+' Send':type==='letter'?I.mail+' Seal it':'Save')+'</button></div>');
   var media=[], priv=false;
   $('cX').onclick=closeSheet;
   if(type==='letter')document.querySelectorAll('.presets .chip').forEach(function(c){c.onclick=function(){document.querySelectorAll('.presets .chip').forEach(function(x){x.classList.toggle('on',x===c);});$('cTitle').value=c.getAttribute('data-t');};});
   if(canPriv)$('cPriv').onclick=function(){priv=!priv;$('cPriv').classList.toggle('on',priv);};
+  var reserve=false;if($('cRes'))$('cRes').onclick=function(){reserve=!reserve;$('cRes').classList.toggle('on',reserve);$('cSend').innerHTML=reserve?I.mail+' Add to reserve':I.mail+' Seal it';};
   function addPending(kind,dataUrl,mime){
     var item={kind:kind,dataUrl:dataUrl,mime:mime};media.push(item);
     var el=document.createElement('div');el.className='pend';
@@ -747,12 +753,13 @@ function openComposer(type,opt){
     if(!text&&!media.length){toast('Add some words, a voice note, a video or a photo');return;}
     var btn=$('cSend');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving…';
     var uploads=media.reduce(function(pr,m){return pr.then(function(arr){return api('api_uploadMedia',m.dataUrl,m.kind).then(function(r){arr.push(r);return arr;});});},Promise.resolve([]));
-    uploads.then(function(ms){return api('api_save',{type:type,text:text,media:ms,private:priv,question:opt.question||'',title:type==='letter'?$('cTitle').value:''});})
+    uploads.then(function(ms){return api('api_save',{type:type,text:text,media:ms,private:priv,question:opt.question||'',title:type==='letter'?$('cTitle').value:'',reserve:reserve});})
       .then(function(){
         closeSheet();
         if(type==='note'||type==='letter'||type==='memory')celebrate();
-        toast(type==='note'?'Sent with love 💌':type==='letter'?'Sealed and delivered ✉':'Saved 💛');
+        toast(type==='note'?'Sent with love 💌':type==='letter'?(reserve?'Tucked into the reserve ✉':'Sealed and delivered ✉'):'Saved 💛');
         var st=S.boot.streaks;if(st&&!st.todayMe){st.todayMe=true;st.me=(st.me||0)+1;}
+        if(reserve)api('api_boot').then(function(b){S.boot.reserveLetters=b.reserveLetters;if(S.tab==='love'){renderLove();wireGear();}});
         if(S.tab!=='home'||type!=='drop'){go(S.tab);}
       })
       .catch(function(e){toast(errMsg(e),4000);btn.disabled=false;btn.innerHTML='Try again';});

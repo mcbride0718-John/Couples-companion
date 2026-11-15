@@ -394,10 +394,28 @@ function start(){
     if(!b.settings.onboarded){renderOnboarding(0);return;}
     setBadge(b.unseenNotes);
     go(S.tab);
+    nightNudge();
     var st=b.streaks, key='cel_'+b.today;
     if(st&&[3,7,14,30,50,100,365].indexOf(st.together)>=0&&!sessionFlag(key)){setTimeout(function(){celebrate(34);toast(st.together+' days in a row, together! 🍋',3500);},700);}
   }).catch(function(e){$('view').innerHTML='<div class="card" style="margin-top:60px">Something went wrong: '+esc(errMsg(e))+'</div>';});
 }
+/* Late at night (midnight to 6 AM), gently offer Heidi a sealed letter. Once a night. */
+function nightNudge(){
+  var b=S.boot, h=new Date().getHours();
+  if(!b||b.me!=='heidi'||h>=6)return;
+  if(sessionFlag('night_'+b.today))return;
+  api('api_feed',{types:['letter']}).then(function(list){
+    var sealed=list.filter(function(e){return e.sealed;});if(!sealed.length)return;
+    var pick=sealed.find(function(e){return /sleep/i.test(e.title);})||sealed[0];
+    openSheet('<div style="text-align:center;padding:6px 4px 4px"><div style="font-size:44px">🌙</div><h2 style="margin:6px 0">Can\'t sleep, love?</h2>'+
+      '<p class="muted" style="margin:0 0 16px">There\'s a sealed letter waiting for you. Maybe tonight\'s the night.</p>'+
+      '<div class="env wiggle" style="max-width:220px;margin:0 auto 18px"><span class="seal">'+I.heartFill+'</span><span class="t">'+esc(pick.title)+'</span></div>'+
+      '<div class="row" style="justify-content:center"><button class="btn" id="nOpen">'+I.mail+' Open it</button><button class="btn ghost" id="nLater">Not tonight</button></div></div>');
+    $('nLater').onclick=closeSheet;
+    $('nOpen').onclick=function(){closeSheet();setTimeout(function(){openLetter(pick);},350);};
+  }).catch(function(){});
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.boot&&S.boot.settings.onboarded)nightNudge();});
 function sessionFlag(k){try{if(localStorage.getItem(k))return true;localStorage.setItem(k,'1');}catch(e){}return false;}
 function setBadge(n){var b=$('loveBadge');if(n>0){b.textContent=n;b.classList.remove('hidden');}else b.classList.add('hidden');}
 function topbar(title,sub){
@@ -473,7 +491,7 @@ function renderHome(){
         '<div class="streaks">'+streakChips+'</div></div></div>'+
     '</div>'+
     keyWarn+
-    (b.sealedLetters?'<div class="card" id="sealedCard" style="cursor:pointer">'+tape(2)+'<div class="eyebrow">'+I.mail+' Sealed with love</div><div class="q" style="margin:0">'+esc(nm(p))+' left you '+b.sealedLetters+' sealed letter'+(b.sealedLetters>1?'s':'')+'. Open one when the moment is right.</div></div>':'')+
+    (b.sealedLetters?'<div class="card" id="sealedCard" style="cursor:pointer">'+tape(2)+'<div class="eyebrow">'+I.mail+' Sealed with love</div><div class="q" style="margin:0">'+'There\'s '+(b.sealedLetters>1?b.sealedLetters+' sealed letters':'a sealed letter')+' waiting for you. Open one when the moment is right.</div></div>':'')+
     '<div class="card lined">'+tape(0)+'<div class="eyebrow">'+I.sun+' Today\'s question</div><div class="q" id="qtext">'+esc(b.question)+'</div>'+
       '<div class="row"><button class="btn" id="qTalk">'+I.mic+' Talk it through</button><button class="btn soft" id="qWrite">'+I.pen+' Write</button><button class="btn ghost" id="qNew" aria-label="Different question">'+I.refresh+'</button></div></div>'+
     '<div class="card">'+tape(1,'l')+'<div class="eyebrow">'+I.sparkle+' An idea for you &amp; '+esc(nm(p))+'</div><div class="idea" id="idea"><span class="spinner"></span></div>'+
@@ -533,7 +551,7 @@ function renderLove(){
       letters.forEach(function(e){
         var el=document.createElement('button');
         el.className='env'+(e.mine&&!e.fromCompanion?' mine':'')+(e.openedAt&&!e.mine?' opened':'')+(e.sealed?' wiggle':'')+(e.fromCompanion?' auto':'');
-        var who=e.fromCompanion?'from your companion':(e.mine?'for '+esc(nm(e.to)):'from '+esc(nm(e.author)));
+        var who=e.fromCompanion?(e.mine?'backup letter':'for you'):(e.mine?'for '+esc(nm(e.to)):'from '+esc(nm(e.author)));
         var st=e.queued?' · in reserve':e.openedAt?' · opened':' · sealed';
         el.innerHTML='<span class="seal">'+I.heartFill+'</span><span class="t">'+esc(e.title)+'<br><span style="font-size:15px;opacity:.75">'+who+st+'</span></span>';
         if(e.queued)el.style.opacity='.7';
@@ -550,7 +568,7 @@ function renderLove(){
 }
 function openLetter(e){
   var show=function(x){
-    openSheet('<div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="muted small">'+(x.fromCompanion?'From your companion, with '+esc(nm(x.author))+'\'s own words':x.mine?'Your letter for '+esc(nm(x.to)):'From '+esc(nm(x.author)))+'</span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    openSheet('<div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="muted small">'+(x.fromCompanion?(x.mine?'A backup letter for '+esc(nm(x.to))+', written from your own words':'A letter for you'):x.mine?'Your letter for '+esc(nm(x.to)):'From '+esc(nm(x.author)))+'</span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
       '<div class="lettershow">'+tape(0)+'<div class="t">'+esc(x.title)+'</div><div class="text">'+esc(x.text)+'</div><div class="media" id="lmedia"></div></div>'+
       (x.mine?'<p class="muted small" style="margin-top:14px">'+(x.queued?'In reserve. It will be delivered when '+esc(nm(x.to))+' has no other sealed letter waiting.':x.openedAt?esc(nm(x.to))+' opened this '+ago(x.openedAt)+'.':'Still sealed. '+esc(nm(x.to))+' will see only the title until '+(x.to==='heidi'?'she':'he')+' opens it.')+'</p>':''));
     $('cX').onclick=closeSheet;
@@ -653,7 +671,7 @@ function entryEl(e,opt){
   d.className='card entry'+(e.type==='note'?' note-card':'')+(e.type==='memory'?' mem':'');
   var hearts=e.hearts||{}, other=e.author===S.boot.me?partner():S.boot.me;
   var heartOn=!!hearts[S.boot.me], heartOther=!!hearts[other];
-  var whoLine = e.fromCompanion ? 'Your companion → '+esc(nm(e.to)) : (e.type==='note'||e.type==='letter') ? esc(nm(e.author))+' → '+esc(nm(e.to)) : esc(nm(e.author));
+  var whoLine = e.fromCompanion ? (e.mine?'Backup letter → '+esc(nm(e.to)):'A letter for you') : (e.type==='note'||e.type==='letter') ? esc(nm(e.author))+' → '+esc(nm(e.to)) : esc(nm(e.author));
   var body='';
   if(e.question)body+='<div class="qline">'+esc(e.question)+'</div>';
   if(e.type==='chat'){

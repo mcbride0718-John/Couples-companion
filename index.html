@@ -91,6 +91,7 @@ textarea.box.handbox{font-family:Caveat,cursive;font-size:24px;line-height:1.25;
 textarea.box:focus,input.field:focus,select.field:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(233,160,59,.2)}
 input.field,select.field{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;outline:none}
 label.lbl{display:block;font-weight:800;font-size:14px;margin:14px 0 6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .chip{padding:8px 13px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:14px;display:inline-flex;gap:6px;align-items:center;font-weight:700}
 .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .chip svg{width:16px;height:16px}
@@ -404,6 +405,8 @@ function start(){
     S.boot=b; applySeason();
     if(!b.settings.onboarded){renderOnboarding(0);return;}
     setBadge(b.unseenNotes);
+    var qt=new URLSearchParams(location.search).get('tab');
+    if(qt&&['home','love','talk','story','journal','memories'].indexOf(qt)>=0){S.tab=qt;try{history.replaceState(null,'',location.pathname);}catch(e){}}
     go(S.tab);
     nightNudge();
     var st=b.streaks, key='cel_'+b.today;
@@ -511,8 +514,10 @@ function renderHome(){
     (b.onThisDay?'<div class="sectionhead"><span class="hand">'+esc(b.onThisDay.label)+'…</span></div><div id="otd"></div>':'')+
     '<div class="card sticky">'+tape(2,'r')+'<div class="eyebrow">'+I.pen+' Quick drop</div><textarea class="box handbox" id="drop" style="background:transparent;border-color:rgba(196,86,47,.2)" placeholder="What\'s on your mind? Just drop it here…"></textarea>'+
       '<div class="row" style="justify-content:space-between;margin-top:8px"><label class="toggle"><span class="sw" id="dropPriv"></span>Just for me</label><button class="btn" id="dropSave">Save</button></div></div>'+
-    '<div class="sectionhead"><span class="hand">Latest from '+esc(nm(p))+'</span></div><div id="latest"></div>';
+    '<div class="sectionhead"><span class="hand">Latest from '+esc(nm(p))+'</span></div><div id="latest"></div>'+
+    '<button class="card" id="homeIdea" style="display:block;width:100%;text-align:left;margin-top:8px">'+tape(1,'r')+'<div class="eyebrow">💡 Make Lemonade better</div><div class="muted">Got an idea for our app? Tell me anytime.</div></button>';
   if($('goKey'))$('goKey').onclick=renderSettings;
+  $('homeIdea').onclick=renderIdeas;
   if($('sealedCard'))$('sealedCard').onclick=function(){go('love');};
   if(b.photoId)loadMediaUrl(b.photoId).then(function(u){if($('usImg'))$('usImg').src=u;}).catch(function(){});
   $('usPhoto').onclick=function(){$('fUs').click();};
@@ -701,7 +706,7 @@ RECS.start=function(){
   if(RECS.on||!S.rec||S.rec.busy)return;
   if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser can\'t record audio. Tap "Type instead".',4500);return;}
   stopAudio();S.voiceMode=true;
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(stream){
+  navigator.mediaDevices.getUserMedia({audio:micConstraints(S.rec&&S.rec.mode==='together')}).then(function(stream){
     RECS.on=true;RECS.stream=stream;RECS.session=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     RECS.idx=0;RECS.discard=false;RECS.chain=Promise.resolve();RECS.t0=Date.now();RECS.segT0=Date.now();RECS.lastVoice=Date.now();RECS.heard=false;RECS.chimed=false;RECS.floor=0.01;RECS.failed=0;
     RECS.mime=RECS.pick();
@@ -714,7 +719,8 @@ RECS.start=function(){
 };
 RECS.seg=function(){
   var old=RECS.mr, idx=RECS.idx++, started=RECS.segT0;RECS.segT0=Date.now();
-  var mr=new MediaRecorder(RECS.stream,RECS.mime?{mimeType:RECS.mime,audioBitsPerSecond:24000}:{audioBitsPerSecond:24000});
+  var bps=(S.rec&&S.rec.mode==='together'&&micPref().stereo)?64000:24000;
+  var mr=new MediaRecorder(RECS.stream,RECS.mime?{mimeType:RECS.mime,audioBitsPerSecond:bps}:{audioBitsPerSecond:bps});
   var chunks=[];mr.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
   mr.onstop=function(){var secs=(Date.now()-mr._t0)/1000;if(!chunks.length||RECS.discard)return;RECS.upload(new Blob(chunks,{type:mr.mimeType||RECS.mime||'audio/webm'}),mr._idx,secs);};
   mr._idx=idx;mr._t0=Date.now();mr.start(1000);RECS.mr=mr;
@@ -725,7 +731,8 @@ RECS.upload=function(blob,idx,secs){
   RECS.chain=RECS.chain.then(function(){
     return fileToDataUrl(blob).then(function(u){
       var tries=0;
-      function go(){return api('api_storyPart',session,idx,u,secs,mode).catch(function(e){if(++tries<3)return new Promise(function(r){setTimeout(r,2500);}).then(go);RECS.failed++;toast('One piece of audio didn\'t save: '+errMsg(e),5000);});}
+      var left=(mode==='together'&&micPref().stereo)?micPref().left:'';
+      function go(){return api('api_storyPart',session,idx,u,secs,mode,left).catch(function(e){if(++tries<3)return new Promise(function(r){setTimeout(r,2500);}).then(go);RECS.failed++;toast('One piece of audio didn\'t save: '+errMsg(e),5000);});}
       return go();
     });
   });
@@ -847,7 +854,7 @@ function renderMemories(){
 }
 
 /* ---------------- entry cards ---------------- */
-var TYPE_LABEL={note:'Love note',journal:'Journal',drop:'Quick note',memory:'Memory',chat:'Talk',letter:'Letter'};
+var TYPE_LABEL={idea:'Idea',note:'Love note',journal:'Journal',drop:'Quick note',memory:'Memory',chat:'Talk',letter:'Letter'};
 function entryEl(e,opt){
   opt=opt||{};
   var d=document.createElement('div');
@@ -913,8 +920,8 @@ var REC=null;
 function openComposer(type,opt){
   opt=opt||{};
   var p=partner();
-  var titles={note:'A love note for '+nm(p),journal:'Journal',drop:'Quick drop',memory:'Save a memory',letter:'A sealed letter for '+nm(p)};
-  var ph={note:'Tell '+nm(p)+' what\'s in your heart…',journal:'Write as much or as little as you like…',drop:'What\'s on your mind?',memory:'What happened? Why does it matter?',letter:'Write what '+nm(p)+' will need to hear in that moment…'};
+  var titles={idea:'An idea for our app',note:'A love note for '+nm(p),journal:'Journal',drop:'Quick drop',memory:'Save a memory',letter:'A sealed letter for '+nm(p)};
+  var ph={idea:'What would make you open Lemonade every day? Anything goes…',note:'Tell '+nm(p)+' what\'s in your heart…',journal:'Write as much or as little as you like…',drop:'What\'s on your mind?',memory:'What happened? Why does it matter?',letter:'Write what '+nm(p)+' will need to hear in that moment…'};
   var canPriv=(type==='journal'||type==='drop');
   var hand=(type==='note'||type==='letter'||type==='memory');
   var presets=type==='letter'?'<label class="lbl">Open when…</label><div class="presets">'+S.boot.letterPresets.map(function(t,i){return '<button class="chip'+(i===0?' on':'')+'" data-t="'+esc(t)+'">'+esc(t.replace(/^Open (when|on) /,''))+'</button>';}).join('')+'</div><input class="field" id="cTitle" value="'+esc(S.boot.letterPresets[0])+'" style="margin-bottom:12px">':'';
@@ -925,8 +932,8 @@ function openComposer(type,opt){
     '<div id="cRec"></div><div class="pending" id="cPend"></div>'+
     '<input type="file" id="fVideo" accept="video/*" capture="user" class="hidden"><input type="file" id="fPhoto" accept="image/*" class="hidden"><input type="file" id="fCam" accept="image/*" capture="environment" class="hidden"><input type="file" id="fAudio" accept="audio/*" capture class="hidden">'+
     (type==='letter'?'<label class="toggle" style="margin:4px 0 6px"><span class="sw" id="cRes"></span>Keep in reserve</label><div class="muted small" style="margin-bottom:8px">Reserve letters stay hidden and are delivered one at a time, so '+esc(nm(p))+' always has a sealed letter waiting.</div>':'')+
-    '<div class="row" style="justify-content:space-between;margin-top:6px">'+(canPriv?'<label class="toggle"><span class="sw" id="cPriv"></span>Just for me</label>':'<span class="muted small">'+(type==='letter'?esc(nm(p))+' sees only the title until '+(p==='heidi'?'she':'he')+' opens it.':type==='note'?'Just for '+esc(nm(p))+'.':'Shared with '+esc(nm(p))+'.')+'</span>')+
-    '<button class="btn" id="cSend">'+(type==='note'?I.send+' Send':type==='letter'?I.mail+' Seal it':'Save')+'</button></div>');
+    '<div class="row" style="justify-content:space-between;margin-top:6px">'+(canPriv?'<label class="toggle"><span class="sw" id="cPriv"></span>Just for me</label>':'<span class="muted small">'+(type==='idea'?'You both can see every idea.':type==='letter'?esc(nm(p))+' sees only the title until '+(p==='heidi'?'she':'he')+' opens it.':type==='note'?'Just for '+esc(nm(p))+'.':'Shared with '+esc(nm(p))+'.')+'</span>')+
+    '<button class="btn" id="cSend">'+(type==='idea'?'💡 Share idea':type==='note'?I.send+' Send':type==='letter'?I.mail+' Seal it':'Save')+'</button></div>');
   var media=[], priv=false;
   $('cX').onclick=closeSheet;
   if(type==='letter')document.querySelectorAll('.presets .chip').forEach(function(c){c.onclick=function(){document.querySelectorAll('.presets .chip').forEach(function(x){x.classList.toggle('on',x===c);});$('cTitle').value=c.getAttribute('data-t');};});
@@ -960,9 +967,10 @@ function openComposer(type,opt){
       .then(function(){
         closeSheet();
         if(type==='note'||type==='letter'||type==='memory')celebrate();
-        toast(type==='note'?'Sent with love 💌':type==='letter'?(reserve?'Tucked into the reserve ✉':'Sealed and delivered ✉'):'Saved 💛');
+        toast(type==='idea'?'Thank you! Idea saved 💡':type==='note'?'Sent with love 💌':type==='letter'?(reserve?'Tucked into the reserve ✉':'Sealed and delivered ✉'):'Saved 💛');
         var st=S.boot.streaks;if(st&&!st.todayMe){st.todayMe=true;st.me=(st.me||0)+1;}
         if(reserve)api('api_boot').then(function(b){S.boot.reserveLetters=b.reserveLetters;if(S.tab==='love'){renderLove();wireGear();}});
+        if(type==='idea'){renderIdeas();return;}
         if(S.tab!=='home'||type!=='drop'){go(S.tab);}
       })
       .catch(function(e){toast(errMsg(e),4000);btn.disabled=false;btn.innerHTML='Try again';});
@@ -972,7 +980,7 @@ function openComposer(type,opt){
 }
 function startRecording(done,fallback){
   if(!navigator.mediaDevices||!window.MediaRecorder){fallback();return;}
-  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+  navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(stream){
     var mime=['audio/webm;codecs=opus','audio/mp4','audio/webm',''].find(function(t){return !t||MediaRecorder.isTypeSupported(t);});
     var mr=new MediaRecorder(stream,mime?{mimeType:mime}:undefined), chunks=[], t0=Date.now();
     REC={mr:mr,stream:stream,cancel:false};
@@ -1247,6 +1255,127 @@ function stopVoice(){
   var m=$('micBtn');if(m)m.classList.remove('live');
 }
 
+/* ---------------- ideas for our app ---------------- */
+var IDEA_ST={new:'New',maybe:'Maybe',planned:'Planned',done:'Done ✓'};
+function renderIdeas(){
+  stopVoice();setNav('');window.scrollTo(0,0);$('fab').classList.add('hidden');
+  var v=$('view');
+  v.innerHTML=topbar('Ideas for our app','Help make Lemonade a place you want to come back to')+
+    '<div class="card" style="background:linear-gradient(135deg,#fff6c9,#ffeaa0)">'+tape(2)+'<div class="q" style="margin-bottom:12px">What would make you open Lemonade every day? Something to add, change, fix or make sweeter?</div>'+
+    '<div class="row"><button class="btn" id="iNew">💡 Share an idea</button><button class="btn soft" id="iVoice">'+I.mic+' Say it</button></div></div>'+
+    '<div class="row" style="justify-content:space-between;margin:4px 2px 14px"><span class="hand" style="font-size:26px;color:var(--accent)">Our ideas</span><button class="btn ghost small" id="iCopy">Copy all ideas</button></div>'+
+    '<div id="ilist"><div class="empty"><span class="spinner"></span></div></div>'+
+    '<div style="margin-top:10px"><button class="btn ghost" id="iBack">Back</button></div>';
+  wireGear();
+  $('iNew').onclick=function(){openComposer('idea');};
+  $('iVoice').onclick=function(){openComposer('idea',{autoVoice:true});};
+  $('iBack').onclick=function(){go(S.tab||'home');};
+  api('api_feed',{types:['idea'],limit:200}).then(function(list){
+    S.ideas=list;var box=$('ilist');if(!box)return;box.innerHTML='';
+    if(!list.length){box.innerHTML='<div class="card empty">'+tape(0)+'<div class="big">💡</div><div class="serif">No ideas yet</div>Heidi already had a great one: notifications! What\'s next?</div>';return;}
+    list.forEach(function(e,i){
+      var d=entryEl(e,{i:i});
+      var stt=e.status||'new';
+      var bar=document.createElement('div');bar.className='row';bar.style.marginTop='8px';
+      bar.innerHTML=Object.keys(IDEA_ST).map(function(k){return '<button class="chip'+(k===stt?' on':'')+'" data-s="'+k+'" style="font-size:12px;padding:5px 10px">'+IDEA_ST[k]+'</button>';}).join('');
+      bar.querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){var ns=b.getAttribute('data-s');api('api_setIdeaStatus',e.id,ns).then(function(){e.status=ns;bar.querySelectorAll('[data-s]').forEach(function(x){x.classList.toggle('on',x===b);});});};});
+      d.appendChild(bar);box.appendChild(d);
+    });
+  }).catch(function(e){$('ilist').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
+  $('iCopy').onclick=function(){
+    var t=(S.ideas||[]).map(function(e){return '- ['+(IDEA_ST[e.status||'new']||'New')+'] '+nm(e.author)+' ('+new Date(e.createdAt).toLocaleDateString()+'): '+(e.text||'(voice note)');}).join('\n');
+    if(!t){toast('No ideas to copy yet');return;}
+    t='Ideas for our Lemonade app:\n'+t;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied! Paste it to Claude to build them 🍋',3500);}).catch(function(){openSheet('<h2>Our ideas</h2><p class="muted small">Select all and copy:</p><textarea class="box" style="min-height:300px">'+esc(t)+'</textarea>');});
+  };
+}
+
+/* ---------------- phone notifications ---------------- */
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;}
+function b64uToBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var r=atob(s),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a;}
+var HOURS=[[6,'6 AM'],[8,'8 AM'],[10,'10 AM'],[12,'Noon'],[15,'3 PM'],[18,'6 PM'],[20,'8 PM'],[21,'9 PM']];
+function notifCard(){
+  var st=S.boot.settings, times=st.pushTimes||[], on=S.boot.pushPhones>0&&window.Notification&&Notification.permission==='granted';
+  var supported=('serviceWorker' in navigator)&&('PushManager' in window)&&window.Notification;
+  var tip=isIOS()&&!isStandalone()?'<p class="small" style="background:#fff3e0;border-radius:12px;padding:10px">On iPhone, notifications only work when Lemonade is opened from its <b>home-screen icon</b>. Add it to your home screen first (Share → Add to Home Screen), then open it from the icon and come back here.</p>':'';
+  return '<div class="card">'+tape(1)+'<h3>🔔 Phone notifications</h3>'+tip+
+    (!supported&&!tip?'<p class="small muted">This browser can\'t show notifications. On Android use Chrome; on iPhone open Lemonade from its home-screen icon.</p>':
+    '<p class="small muted" id="nStatus">'+(on?'✅ Notifications are on for this phone.':'Get a gentle pop-up on your lock screen, like a text from Lemonade.')+'</p>'+
+    '<div class="row"><button class="btn'+(on?' soft':'')+'" id="nOn">'+(on?'Turn on again':'Turn on for this phone')+'</button>'+(S.boot.pushPhones?'<button class="btn ghost" id="nTest">Send me a test</button>':'')+'</div>')+
+    '<label class="lbl">Nudge me at</label><div class="chips" id="nTimes">'+HOURS.map(function(h){return '<button class="chip'+(times.indexOf(h[0])>=0?' on':'')+'" data-h="'+h[0]+'">'+h[1]+'</button>';}).join('')+'</div>'+
+    '<label class="toggle" style="margin-top:14px"><span class="sw'+(st.pushLove!==false?' on':'')+'" id="nLove"></span>Tell me when '+esc(nm(partner()))+' sends love or adds a memory</label></div>';
+}
+function wireNotif(){
+  var st=S.boot.settings;
+  if($('nOn'))$('nOn').onclick=function(){
+    var btn=this;btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Asking…';
+    Notification.requestPermission().then(function(perm){
+      if(perm!=='granted')throw new Error('Notifications were not allowed. You can allow them in your phone\'s settings for this app.');
+      return Promise.all([navigator.serviceWorker.register('sw.js').then(function(){return navigator.serviceWorker.ready;}),api('api_pushKey')]);
+    }).then(function(r){
+      var reg=r[0],key=r[1];
+      return reg.pushManager.getSubscription().then(function(old){return old||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToBytes(key)});});
+    }).then(function(sub){return api('api_pushSubscribe',JSON.parse(JSON.stringify(sub)));})
+    .then(function(){S.boot.pushPhones=(S.boot.pushPhones||0)+1;celebrate(14);toast('Notifications are on 🔔',3000);renderSettings();})
+    .catch(function(e){btn.disabled=false;btn.textContent='Turn on for this phone';toast(errMsg(e),6000);});
+  };
+  if($('nTest'))$('nTest').onclick=function(){var b=this;b.disabled=true;api('api_pushTest').then(function(){toast('Sent! It should pop up in a few seconds.',3500);b.disabled=false;}).catch(function(e){toast(errMsg(e),5000);b.disabled=false;});};
+  $('nTimes').querySelectorAll('[data-h]').forEach(function(c){c.onclick=function(){
+    c.classList.toggle('on');var t=[].map.call($('nTimes').querySelectorAll('.on'),function(x){return +x.getAttribute('data-h');});
+    st.pushTimes=t;api('api_setSettings',{pushTimes:t}).then(function(){toast(t.length?'Nudges set 🔔':'No scheduled nudges');});
+  };});
+  $('nLove').onclick=function(){var on=!(st.pushLove!==false);st.pushLove=on;this.classList.toggle('on',on);api('api_setSettings',{pushLove:on});};
+}
+
+/* ---------------- microphone choice (USB and two-person mics) ---------------- */
+function micPref(){try{return JSON.parse(localStorage.getItem('cc_mic')||'{}');}catch(e){return {};}}
+function saveMicPref(o){try{localStorage.setItem('cc_mic',JSON.stringify(o));}catch(e){}}
+function micConstraints(together){
+  var m=micPref(), c={};
+  if(m.id)c.deviceId={exact:m.id};
+  var ext=!!m.id;                       // an external mic sounds better without the phone's call processing
+  c.echoCancellation=!ext;c.noiseSuppression=!ext;c.autoGainControl=!ext;
+  if(together&&m.stereo){c.channelCount={ideal:2};c.echoCancellation=false;c.noiseSuppression=false;c.autoGainControl=false;}
+  return c;
+}
+function micCard(){
+  var m=micPref();
+  return '<div class="card">'+tape(2)+'<h3>🎙 Microphone</h3><p class="small muted" style="margin:4px 0 8px">Plug in your USB microphone, then choose it here. Lemonade remembers your choice on this phone.</p>'+
+    '<select class="field" id="mDev"><option value="">Phone\'s built-in microphone</option>'+(m.id?'<option value="'+esc(m.id)+'" selected>'+esc(m.label||'Chosen microphone')+'</option>':'')+'</select>'+
+    '<div class="row" style="margin-top:8px"><button class="btn soft small" id="mFind">Find my microphones</button><button class="btn ghost small" id="mTest">Test it</button></div><div id="mMeter" style="height:10px;border-radius:6px;background:#efe3d6;margin-top:8px;overflow:hidden"><div style="height:100%;width:0;background:var(--accent);transition:width .1s"></div></div>'+
+    '<label class="toggle" style="margin-top:14px"><span class="sw'+(m.stereo?' on':'')+'" id="mSt"></span>Two-person mic (one on each of us)</label>'+
+    '<div id="mStBox" class="'+(m.stereo?'':'hidden')+'"><p class="small muted" style="margin:8px 0 6px">Used in <b>Remember together</b>. It records in stereo so each voice stays on its own side.</p><label class="lbl" style="margin-top:4px">The LEFT mic is on</label><select class="field" id="mLeft"><option value="john"'+(m.left!=='heidi'?' selected':'')+'>'+esc(nm('john'))+'</option><option value="heidi"'+(m.left==='heidi'?' selected':'')+'>'+esc(nm('heidi'))+'</option></select></div>'+
+    '<p class="small muted" style="margin-top:10px">Note: the quick-talk listening in Talk uses whatever microphone your phone picks; story recordings and voice notes use the one chosen here.</p></div>';
+}
+function wireMic(){
+  function fill(){
+    return navigator.mediaDevices.enumerateDevices().then(function(ds){
+      var ins=ds.filter(function(d){return d.kind==='audioinput';}), m=micPref(), sel=$('mDev');if(!sel)return;
+      sel.innerHTML='<option value="">Phone\'s built-in microphone</option>'+ins.filter(function(d){return d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications';}).map(function(d,i){return '<option value="'+esc(d.deviceId)+'"'+(d.deviceId===m.id?' selected':'')+'>'+esc(d.label||('Microphone '+(i+1)))+'</option>';}).join('');
+      if(ins.length<=1)toast('Only one microphone found. Plug in the USB mic and tap "Find" again.',4500);
+    });
+  }
+  $('mFind').onclick=function(){
+    if(!navigator.mediaDevices){toast('This browser can\'t choose microphones.');return;}
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){st.getTracks().forEach(function(t){t.stop();});return fill();}).catch(function(){toast('Allow the microphone first, then try again.',4000);});
+  };
+  $('mDev').onchange=function(){var o=micPref();o.id=this.value;o.label=this.value?this.options[this.selectedIndex].text:'';saveMicPref(o);toast(this.value?'Using '+o.label:'Using the phone\'s microphone');};
+  $('mSt').onclick=function(){var o=micPref();o.stereo=!o.stereo;if(!o.left)o.left='john';saveMicPref(o);this.classList.toggle('on',o.stereo);$('mStBox').classList.toggle('hidden',!o.stereo);};
+  $('mLeft').onchange=function(){var o=micPref();o.left=this.value;saveMicPref(o);};
+  $('mTest').onclick=function(){
+    var bar=$('mMeter').firstChild,btn=this;btn.disabled=true;
+    navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(stream){
+      var A=window.AudioContext||window.webkitAudioContext,ctx=new A(),an=ctx.createAnalyser(),buf=new Float32Array(1024),t0=Date.now();
+      ctx.createMediaStreamSource(stream).connect(an);
+      var tr=stream.getAudioTracks()[0],set=tr&&tr.getSettings?tr.getSettings():{};
+      toast('Talk now… ('+(tr?tr.label:'mic')+(set.channelCount?', '+set.channelCount+' channel'+(set.channelCount>1?'s':''):'')+')',3500);
+      (function loop(){an.getFloatTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++)s+=buf[i]*buf[i];bar.style.width=Math.min(100,Math.sqrt(s/buf.length)*500)+'%';
+        if(Date.now()-t0<6000)requestAnimationFrame(loop);else{stream.getTracks().forEach(function(t){t.stop();});ctx.close();bar.style.width='0';btn.disabled=false;}})();
+    }).catch(function(){btn.disabled=false;toast('Could not open that microphone. Tap "Find my microphones" and pick again.',4500);});
+  };
+}
+
 /* ---------------- settings ---------------- */
 function renderSettings(){
   stopVoice();
@@ -1254,6 +1383,8 @@ function renderSettings(){
   setNav('');window.scrollTo(0,0);$('fab').classList.add('hidden');
   var voiceList=Object.keys(b.voices).map(function(n){return '<button class="vopt'+(st.voiceName===n?' on':'')+'" data-v="'+n+'"><span><b>'+n+'</b><span>'+esc(b.voices[n])+'</span></span><span class="play" data-play="'+n+'">'+I.play+'</span></button>';}).join('');
   v.innerHTML=topbar('Settings','')+
+    '<button class="card" id="sIdeas" style="display:block;width:100%;text-align:left;background:linear-gradient(135deg,#fff6c9,#ffeaa0)">'+tape(2)+'<div class="eyebrow">💡 Ideas for our app</div><div class="q" style="margin:0;font-size:20px">How could Lemonade be better? Share an idea anytime.</div></button>'+
+    notifCard()+micCard()+
     '<div class="card">'+tape(0)+'<h3>Our story</h3>'+
       '<label class="lbl">The day it all began</label><input class="field" id="sAnn" type="date" value="'+esc(b.anniversary)+'">'+
       '<label class="lbl">Photo of you two</label><button class="btn soft" id="sPhoto">'+I.cam+' '+(b.photoId?'Change photo':'Add a photo')+'</button>'+
@@ -1278,6 +1409,8 @@ function renderSettings(){
     '<div class="row" style="margin:6px 0 20px"><button class="btn" id="sSave">Save settings</button><button class="btn ghost" id="sBack">Back</button></div>'+
     '<p class="muted small" style="padding:0 4px">Your companion is a caring listener, not a therapist. If things ever feel heavy, talk to each other, a trusted friend or a professional. In the US you can call or text 988 any time.</p>';
   wireGear();
+  $('sIdeas').onclick=renderIdeas;
+  wireNotif();wireMic();
   var sharing=st.sharing, voice=st.voice!==false, voiceName=st.voiceName;
   v.querySelectorAll('.choice').forEach(function(c){c.onclick=function(){sharing=c.getAttribute('data-s');v.querySelectorAll('.choice').forEach(function(x){x.classList.toggle('on',x===c);});};});
   v.querySelectorAll('.vopt').forEach(function(o){o.onclick=function(ev){

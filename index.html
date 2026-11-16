@@ -157,7 +157,12 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px rgba(196,86,47,.4);margin:6px auto 4px}
 .bigmic svg{width:32px;height:32px}
 .bigmic.floating{position:fixed;right:18px;bottom:calc(92px + var(--safe-b));margin:0;z-index:30;width:74px;height:74px;box-shadow:0 10px 26px rgba(91,42,58,.4)}
+.endfloat{position:fixed;left:16px;bottom:calc(100px + var(--safe-b));z-index:30;background:var(--paper);color:var(--deep);border:2px solid var(--accent);font-weight:800;font-size:15px;padding:12px 18px;border-radius:999px;box-shadow:0 8px 20px rgba(91,42,58,.25)}
+.endfloat.raised{bottom:calc(166px + var(--safe-b))}
+.endfloat:disabled{opacity:.7}
+.micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
+.bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
 .bigmic.done{background:#5f8a4e;animation:pulse 1.4s infinite}
 .livetalk{max-height:46vh;overflow:auto}
 .bigmic.live{background:#d2455f;animation:pulse 1.4s infinite}
@@ -173,6 +178,7 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .round{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(233,160,59,.2);color:var(--deep)}
 .round.primary{background:var(--accent);color:#fff}
 .round svg{width:21px;height:21px}
+.topbar.sticky{position:sticky;top:0;z-index:25;background:rgba(251,241,228,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);margin:0 -16px;padding-left:18px;padding-right:18px;border-bottom:1px solid var(--line)}
 .talkbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .toggle{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--deep)}
 .toggle svg{width:16px;height:16px}
@@ -1043,6 +1049,7 @@ function setOrb(state,label){
   var o=document.querySelector('.orb'), s=document.querySelector('.orbstate');
   if(o){o.classList.remove('listening','speaking','thinking');if(state)o.classList.add(state);}
   if(s)s.textContent=label||'';
+  var ms=document.getElementById('micState');if(ms){ms.textContent=label||'';ms.style.display=label?'block':'none';}
 }
 function drawChat(){
   var c=S.chat, v=$('view');
@@ -1053,10 +1060,10 @@ function drawChat(){
     $('backTalk').onclick=function(){S.chat=null;go('talk');};return;
   }
   var hf=c.mode!=='story'||handsFree();
-  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><span class="row" style="gap:14px"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label>'+(c.mode==='story'?'<label class="toggle"><span class="sw'+(handsFree()?' on':'')+'" id="hfSw"></span>Hands-free</label>':'')+'</span><button class="btn soft" id="endChat">'+(c.mode==='story'?'See our timeline':'End &amp; save')+'</button></div></div>'+
+  v.innerHTML='<div class="topbar"><div class="talkbar" style="width:100%"><span class="row" style="gap:14px"><label class="toggle"><span class="sw'+(voiceOn?' on':'')+'" id="spk"></span>'+I.speaker+' Voice</label>'+(c.mode==='story'?'<label class="toggle"><span class="sw'+(handsFree()?' on':'')+'" id="hfSw"></span>Hands-free</label>':'')+'</span></div></div>'+
     '<div class="orbwrap" style="padding-top:4px"><div class="orb'+(c.busy?' thinking':'')+'"></div><div class="orbname">'+(c.mode==='story'?'Our storyteller':esc(Cname()))+'</div><div class="orbstate">'+(c.busy?'thinking…':'')+'</div>'+
-    (SR?'<button class="bigmic'+(c.mode==='story'?' floating'+(S.kb?' raised':''):'')+'" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+micHintText(c)+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
-    '</div><div class="bubbles" id="bubs"></div>'+(c.mode==='story'?'<div style="height:96px"></div>':'')+
+    (SR?'<button class="bigmic floating'+(S.kb?' raised':'')+'" id="micBtn" aria-label="Talk">'+I.mic+'</button><div class="micstate" id="micState" style="display:none"></div><div class="muted small" id="micHint" style="text-align:center;padding:0 16px">'+micHintText(c)+'</div>':'<div class="muted small" style="text-align:center;padding:0 20px">Tip: tap the microphone on your keyboard to talk instead of typing.</div>')+
+    '</div><div class="bubbles" id="bubs"></div><div id="chatEnd" style="height:110px"></div><button class="endfloat'+(S.kb?' raised':'')+'" id="endChat">'+(c.mode==='story'?'📖 See our timeline':'✓ End &amp; save')+'</button>'+
     '<div class="composer'+(SR&&!S.kb?' hidden':'')+'" id="comp"><textarea id="msg" rows="1" placeholder="Type, or use your keyboard\'s mic…"></textarea><button class="round primary" id="sendBtn" aria-label="Send">'+I.send+'</button></div>'+
     (SR?'<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="kbBtn">'+I.kb+' '+(S.kb?'Hide keyboard':'Type instead')+'</button></div>':'');
   c.messages.forEach(function(m,i){if(i===0&&m.role==='user'&&/^(Today's question was:|I'd like to talk more about)/.test(m.text))return;addBubble(m.role==='user'?'me':'ai',m.text);});
@@ -1069,7 +1076,7 @@ function drawChat(){
   ta.oninput=function(){ta.style.height='auto';ta.style.height=Math.min(140,ta.scrollHeight)+'px';};
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>700){e.preventDefault();$('sendBtn').click();}};
   $('sendBtn').onclick=function(){unlockAudio();var t=ta.value.trim();if(!t||c.busy)return;ta.value='';ta.style.height='auto';sendChat(t);};
-  if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);if($('micBtn'))$('micBtn').classList.toggle('raised',S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
+  if($('kbBtn'))$('kbBtn').onclick=function(){S.kb=!S.kb;$('comp').classList.toggle('hidden',!S.kb);if($('micBtn'))$('micBtn').classList.toggle('raised',S.kb);if($('endChat'))$('endChat').classList.toggle('raised',S.kb);this.innerHTML=I.kb+' '+(S.kb?'Hide keyboard':'Type instead');if(S.kb)ta.focus();};
   if($('micBtn'))$('micBtn').onclick=function(){
     unlockAudio();
     if(LONG.on){ if((LONG.text+LONG.interim).trim())finishLong(); else {stopVoice();setOrb('','paused. tap the mic when you\'re ready');} return; }
@@ -1078,11 +1085,11 @@ function drawChat(){
 }
 function addBubble(cls,text,label){
   var b=document.createElement('div');b.className='bub '+cls;b.textContent=(label?label+': ':'')+text;$('bubs').appendChild(b);
-  if(cls.indexOf('typing')<0&&b.scrollIntoView)b.scrollIntoView({behavior:'smooth',block:'nearest'});return b;
+  if(b.scrollIntoView){var tall=b.offsetHeight>window.innerHeight*0.55,end=$('chatEnd');if(tall&&cls.indexOf('ai')===0)b.scrollIntoView({behavior:'smooth',block:'start'});else if(end)end.scrollIntoView({behavior:'smooth',block:'end'});else if(cls.indexOf('typing')<0)b.scrollIntoView({behavior:'smooth',block:'nearest'});}return b;
 }
 function sendChat(text,first){
   var c=S.chat;if(!c)return;
-  if(text){c.messages.push({role:'user',text:text});if(!first)addBubble('me',text);}
+  if(text){text=fixNames(text);c.messages.push({role:'user',text:text});if(!first)addBubble('me',text);}
   c.busy=true;var typing=addBubble('ai typing',Cname()+' is thinking…');setOrb('thinking','thinking…');
   var call=c.mode==='story'?api('api_storyChat',text,c.fresh):api('api_chat',c.id,text,c.mode);
   c.fresh=false;
@@ -1132,7 +1139,12 @@ function pickVoice(){
   for(var i=0;i<pref.length;i++){var f=vs.find(function(v){return v.name.indexOf(pref[i])>=0;});if(f)return f;}
   return vs[0]||null;
 }
+function nameRx(w){return new RegExp('\\b'+String(w).replace(/[.*+?^$()|[\]\\{}]/g,'\\$&')+"(?=\\b|'s)",'gi');}
+function namesList(){return ((S.boot&&S.boot.settings&&S.boot.settings.names)||[]).filter(function(n){return n&&n.spell;});}
+function fixNames(t){t=String(t||'');namesList().forEach(function(n){if(n.say&&n.say.toLowerCase()!==n.spell.toLowerCase())t=t.replace(nameRx(n.say),n.spell);});return t;}
+function sayNames(t){t=String(t||'');namesList().forEach(function(n){if(n.say&&n.say.toLowerCase()!==n.spell.toLowerCase())t=t.replace(nameRx(n.spell),n.say);});return t;}
 function browserSpeak(text){
+  text=sayNames(text);
   if(!window.speechSynthesis){afterSpeak();return;}
   speechSynthesis.cancel();
   var u=new SpeechSynthesisUtterance(text);var v=pickVoice();if(v)u.voice=v;u.rate=1;u.pitch=1.05;
@@ -1175,8 +1187,8 @@ function saveDraft(){try{localStorage.setItem('cc_story_draft',LONG.text);}catch
 function showLong(){
   var t=(LONG.text+' '+LONG.interim).trim();
   if(!LONG.bub){LONG.bub=addBubble('me typing livetalk','');}
-  LONG.bub.textContent=t||'…';LONG.bub.scrollTop=LONG.bub.scrollHeight;
-  LONG.bub.scrollIntoView({block:'nearest'});
+  LONG.bub.textContent=fixNames(t)||'…';LONG.bub.scrollTop=LONG.bub.scrollHeight;
+  var ce=$('chatEnd');if(ce)ce.scrollIntoView({block:'end'});else LONG.bub.scrollIntoView({block:'nearest'});
 }
 function startLong(){
   if(!SR||LONG.on)return;
@@ -1339,6 +1351,20 @@ function micConstraints(together){
   if(together&&m.stereo){c.channelCount={ideal:2};c.echoCancellation=false;c.noiseSuppression=false;c.autoGainControl=false;}
   return c;
 }
+function namesCard(){
+  var rows=namesList().map(function(n,i){return '<div class="row" style="gap:6px;margin-top:6px" data-i="'+i+'"><input class="field nmS" placeholder="Spelled" value="'+esc(n.spell)+'" style="flex:1"><input class="field nmY" placeholder="Sounds like" value="'+esc(n.say||'')+'" style="flex:1"><input class="field nmW" placeholder="Who (our son)" value="'+esc(n.who||'')+'" style="flex:1.2"><button class="btn ghost small nmX" aria-label="Remove">✕</button></div>';}).join('');
+  return '<div class="card">'+tape(1)+'<h3>📝 Names to get right</h3><p class="small muted" style="margin:4px 0 6px">How a name is <b>spelled</b> on screen, and how the voice should <b>say</b> it. If the mic hears it the other way, Lemonade writes it your way.</p>'+
+    '<div id="nmRows">'+rows+'</div><div class="row" style="margin-top:10px"><button class="btn soft small" id="nmAdd">+ Add a name</button><button class="btn primary small" id="nmSave">Save names</button></div></div>';
+}
+function wireNames(){
+  function rowHtml(){var d=document.createElement('div');d.className='row';d.style.cssText='gap:6px;margin-top:6px';d.innerHTML='<input class="field nmS" placeholder="Spelled" style="flex:1"><input class="field nmY" placeholder="Sounds like" style="flex:1"><input class="field nmW" placeholder="Who" style="flex:1.2"><button class="btn ghost small nmX" aria-label="Remove">✕</button>';return d;}
+  $('nmAdd').onclick=function(){$('nmRows').appendChild(rowHtml());};
+  $('nmRows').onclick=function(e){var x=e.target.closest('.nmX');if(x)x.parentNode.remove();};
+  $('nmSave').onclick=function(){
+    var names=[].slice.call($('nmRows').children).map(function(r){return {spell:r.querySelector('.nmS').value.trim(),say:r.querySelector('.nmY').value.trim(),who:r.querySelector('.nmW').value.trim()};}).filter(function(n){return n.spell;});
+    S.boot.settings.names=names;api('api_setSettings',{names:names}).then(function(){toast('Names saved 💛');}).catch(function(e){toast(errMsg(e));});
+  };
+}
 function micCard(){
   var m=micPref();
   return '<div class="card">'+tape(2)+'<h3>🎙 Microphone</h3><p class="small muted" style="margin:4px 0 8px">Plug in your USB microphone, then choose it here. Lemonade remembers your choice on this phone.</p>'+
@@ -1384,7 +1410,7 @@ function renderSettings(){
   var voiceList=Object.keys(b.voices).map(function(n){return '<button class="vopt'+(st.voiceName===n?' on':'')+'" data-v="'+n+'"><span><b>'+n+'</b><span>'+esc(b.voices[n])+'</span></span><span class="play" data-play="'+n+'">'+I.play+'</span></button>';}).join('');
   v.innerHTML=topbar('Settings','')+
     '<button class="card" id="sIdeas" style="display:block;width:100%;text-align:left;background:linear-gradient(135deg,#fff6c9,#ffeaa0)">'+tape(2)+'<div class="eyebrow">💡 Ideas for our app</div><div class="q" style="margin:0;font-size:20px">How could Lemonade be better? Share an idea anytime.</div></button>'+
-    notifCard()+micCard()+
+    notifCard()+micCard()+namesCard()+
     '<div class="card">'+tape(0)+'<h3>Our story</h3>'+
       '<label class="lbl">The day it all began</label><input class="field" id="sAnn" type="date" value="'+esc(b.anniversary)+'">'+
       '<label class="lbl">Photo of you two</label><button class="btn soft" id="sPhoto">'+I.cam+' '+(b.photoId?'Change photo':'Add a photo')+'</button>'+
@@ -1410,7 +1436,7 @@ function renderSettings(){
     '<p class="muted small" style="padding:0 4px">Your companion is a caring listener, not a therapist. If things ever feel heavy, talk to each other, a trusted friend or a professional. In the US you can call or text 988 any time.</p>';
   wireGear();
   $('sIdeas').onclick=renderIdeas;
-  wireNotif();wireMic();
+  wireNotif();wireMic();wireNames();
   var sharing=st.sharing, voice=st.voice!==false, voiceName=st.voiceName;
   v.querySelectorAll('.choice').forEach(function(c){c.onclick=function(){sharing=c.getAttribute('data-s');v.querySelectorAll('.choice').forEach(function(x){x.classList.toggle('on',x===c);});};});
   v.querySelectorAll('.vopt').forEach(function(o){o.onclick=function(ev){

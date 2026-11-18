@@ -202,6 +202,7 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .saying{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;color:var(--deep);margin:4px 0 6px}
 .pmo{display:block;width:100%;text-align:left;border:0;border-bottom:1px dashed var(--line);background:transparent;padding:9px 2px;font:inherit;color:var(--deep)}
 .drow{display:flex;gap:8px}.drow .field{flex:1;min-width:0}
+.vaultcard{border:2px dashed var(--accent)}
 .micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
@@ -451,6 +452,7 @@ function start(){
   $('view').innerHTML='<div class="empty" style="padding-top:40vh"><span class="spinner"></span></div>';
   api('api_boot').then(function(b){
     S.boot=b; applySeason();
+    setTimeout(function(){VAULT.resumeAll(true);},4000);
     if(!b.settings.onboarded){renderOnboarding(0);return;}
     setBadge(b.unseenNotes);
     var qt=new URLSearchParams(location.search).get('tab');
@@ -656,6 +658,7 @@ function renderStory(){
       '<div class="q" style="margin-bottom:12px">Tell me your story, and I\'ll ask the questions that bring the memories back.</div>'+
       '<div class="row"><button class="btn" id="sTell">'+I.mic+' Tell our story</button><button class="btn soft" id="sTogether">👫 Remember together</button><button class="btn soft" id="sAdd">'+I.plus+' Add a moment</button></div>'+
       '<div style="margin-top:6px"><button class="btn ghost small" id="sFresh">Start a fresh session</button></div></div>'+
+    '<div id="vaultBox"></div>'+
     '<div class="seg"><button id="segT" class="'+(S.storyView!=='family'?'on':'')+'">📖 Timeline</button><button id="segF" class="'+(S.storyView==='family'?'on':'')+'">🌳 Our Family</button></div>'+
     '<div id="tline"><div class="empty"><span class="spinner"></span></div></div>';
   $('segT').onclick=function(){S.storyView='timeline';renderStory();};
@@ -664,6 +667,7 @@ function renderStory(){
   $('sFresh').onclick=function(){unlockAudio();startRecorder('solo',null,true);};
   $('sTogether').onclick=function(){unlockAudio();startRecorder('together');};
   $('sAdd').onclick=function(){openMoment(null);};
+  VAULT.sessions().then(VAULT.drawCards);
   if(S.storyView==='family'){renderFamily();return;}
   api('api_story').then(function(r){
     var box=$('tline');if(!box)return;
@@ -867,6 +871,80 @@ function openRecording(r){
 }
 
 /* The recorder: saves your real voice in pieces as you talk, then organizes it */
+/* ---------- phone vault: every recording is kept on this phone until it is safely in Our Story ---------- */
+var VAULT={};
+VAULT.db=function(){
+  if(VAULT._p)return VAULT._p;
+  VAULT._p=new Promise(function(res,rej){
+    if(!window.indexedDB){rej(new Error('no storage'));return;}
+    var r=indexedDB.open('lemonade-vault',1);
+    r.onupgradeneeded=function(){var d=r.result;if(!d.objectStoreNames.contains('parts'))d.createObjectStore('parts',{keyPath:'id'});if(!d.objectStoreNames.contains('sessions'))d.createObjectStore('sessions',{keyPath:'session'});};
+    r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};
+  });
+  VAULT._p.catch(function(){VAULT._p=null;});
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  return VAULT._p;
+};
+VAULT.tx=function(store,mode,fn){return VAULT.db().then(function(d){return new Promise(function(res,rej){var t=d.transaction(store,mode),st=t.objectStore(store),out=fn(st);t.oncomplete=function(){res(out&&out.result!==undefined?out.result:out);};t.onerror=function(){rej(t.error);};t.onabort=function(){rej(t.error);};});});};
+VAULT.putSession=function(o){return VAULT.tx('sessions','readwrite',function(st){st.put(o);}).catch(function(){});};
+VAULT.getSession=function(id){return VAULT.tx('sessions','readonly',function(st){return st.get(id);}).catch(function(){return null;});};
+VAULT.sessions=function(){return VAULT.tx('sessions','readonly',function(st){return st.getAll();}).then(function(r){return r||[];}).catch(function(){return [];});};
+VAULT.putPart=function(o){o.id=o.session+'#'+o.idx;return VAULT.tx('parts','readwrite',function(st){st.put(o);}).catch(function(){});};
+VAULT.parts=function(session){return VAULT.tx('parts','readonly',function(st){return st.getAll();}).then(function(r){return (r||[]).filter(function(x){return x.session===session;}).sort(function(a,b){return a.idx-b.idx;});}).catch(function(){return [];});};
+VAULT.markUploaded=function(session,idx){return VAULT.tx('parts','readwrite',function(st){var g=st.get(session+'#'+idx);g.onsuccess=function(){var x=g.result;if(x){x.uploaded=true;st.put(x);}};}).catch(function(){});};
+VAULT.remove=function(session){return VAULT.parts(session).then(function(ps){return VAULT.tx('parts','readwrite',function(st){ps.forEach(function(x){st.delete(x.id);});});}).then(function(){return VAULT.tx('sessions','readwrite',function(st){st.delete(session);});}).catch(function(){});};
+/* send any piece Drive doesn't have yet (oldest first); resolves true when every piece is up */
+VAULT.uploadMissing=function(session){
+  return Promise.all([VAULT.getSession(session),VAULT.parts(session)]).then(function(r){
+    var sess=r[0]||{},ps=r[1].filter(function(x){return !x.uploaded&&x.blob&&x.blob.size;}),ok=true;
+    return ps.reduce(function(ch,x){return ch.then(function(){return fileToDataUrl(x.blob).then(function(u){return api('api_storyPart',session,x.idx,u,x.secs||0,sess.mode||'solo',sess.left||'');}).then(function(){return VAULT.markUploaded(session,x.idx);}).catch(function(){ok=false;});});},Promise.resolve()).then(function(){return ok;});
+  });
+};
+/* finish recordings that never made it (no internet, app closed, phone died) */
+VAULT.resumeAll=function(quiet){
+  if(VAULT.busy||RECS.on)return Promise.resolve();
+  return VAULT.sessions().then(function(list){
+    list=list.filter(function(x){return !(RECS.session===x.session&&(RECS.on||(S.rec&&S.rec.busy)));});
+    if(!list.length){VAULT.drawCards([]);return;}
+    VAULT.drawCards(list);
+    if(!navigator.onLine)return;
+    VAULT.busy=true;
+    return list.reduce(function(ch,x){return ch.then(function(){
+      VAULT.status(x.session,'Saving the audio to Drive…');
+      return VAULT.parts(x.session).then(function(ps){if(!ps.length){var e=new Error('empty');e.empty=true;throw e;}return VAULT.uploadMissing(x.session);}).then(function(ok){
+        if(!ok)throw new Error('offline');
+        VAULT.status(x.session,'Writing it down and adding it to Our Story… (long ones can take a few minutes)');
+        return api('api_storyFinish',x.session,{mode:x.mode,question:x.question||'',text:''});
+      }).then(function(r){
+        return VAULT.remove(x.session).then(function(){toast('📖 A saved recording was added to Our Story'+(r&&r.recording?': "'+r.recording.title+'"':''),5000);});
+      }).catch(function(e){
+        if(e&&e.empty)return VAULT.remove(x.session);
+        VAULT.status(x.session,e&&e.message!=='offline'&&navigator.onLine?'Couldn\'t finish: '+errMsg(e)+'. It\'s still safe here; tap Finish saving to try again, or save a copy.':'Still safe on this phone. Lemonade will try again when you\'re online.');});
+    });},Promise.resolve()).then(function(){VAULT.busy=false;return VAULT.sessions().then(function(l){VAULT.drawCards(l);if(l.length<list.length&&S.tab==='story'&&!S.rec)renderStory();});},function(){VAULT.busy=false;});
+  });
+};
+VAULT.drawCards=function(list){
+  var box=$('vaultBox');if(!box)return;
+  box.innerHTML=(list||[]).map(function(x){
+    var mins=Math.max(1,Math.round((x.secs||((x.endedAt||x.startedAt)-x.startedAt)/1000||0)/60));
+    return '<div class="card vaultcard">'+tape(2)+'<div class="eyebrow">📼 Saved on this phone</div><div><b>'+(x.mode==='together'?'A recording of you both':'Your story recording')+'</b> from '+new Date(x.startedAt).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+(mins?' · about '+mins+' min':'')+'</div>'+
+      '<div class="small muted vstat" data-s="'+x.session+'" style="margin:6px 0 10px">'+(navigator.onLine?'Waiting to finish saving…':'You\'re offline. It\'s safe here and will finish when you\'re back online.')+'</div>'+
+      '<div class="row"><button class="btn small" data-vgo="'+x.session+'">Finish saving now</button><button class="btn soft small" data-vdl="'+x.session+'">⬇ Save a copy</button><button class="btn ghost small" data-vrm="'+x.session+'">Remove</button></div></div>';
+  }).join('');
+  box.querySelectorAll('[data-vgo]').forEach(function(b){b.onclick=function(){b.disabled=true;VAULT.resumeAll();};});
+  box.querySelectorAll('[data-vdl]').forEach(function(b){b.onclick=function(){VAULT.download(b.getAttribute('data-vdl'));};});
+  box.querySelectorAll('[data-vrm]').forEach(function(b){b.onclick=function(){if(!confirm('Remove this recording from the phone? If it never finished saving, it will be gone for good. (Tap "Save a copy" first to keep the audio.)'))return;VAULT.remove(b.getAttribute('data-vrm')).then(function(){return VAULT.sessions();}).then(VAULT.drawCards);};});
+};
+VAULT.status=function(session,txt){var e=document.querySelector('.vstat[data-s="'+session+'"]');if(e)e.textContent=txt;};
+VAULT.download=function(session){
+  VAULT.parts(session).then(function(ps){
+    ps.forEach(function(x,i){if(!x.blob)return;var ext=/mp4|m4a|aac/.test(x.blob.type)?'m4a':/ogg/.test(x.blob.type)?'ogg':'webm';
+      setTimeout(function(){var a=document.createElement('a');a.href=URL.createObjectURL(x.blob);a.download='Lemonade story '+new Date(+session.split('-')[1]||Date.now()).toISOString().slice(0,10)+' part '+(x.idx+1)+'.'+ext;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);},i*800);});
+    if(!ps.length)toast('Nothing to save.');
+  });
+};
+window.addEventListener('online',function(){setTimeout(function(){VAULT.resumeAll(true);},2000);});
+
 var RECS={on:false};
 RECS.pick=function(){var t=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'];for(var i=0;i<t.length;i++){if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t[i]))return t[i];}return '';};
 RECS.start=function(){
@@ -874,7 +952,8 @@ RECS.start=function(){
   if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser can\'t record audio. Tap "Type instead".',4500);return;}
   stopAudio();S.voiceMode=true;
   navigator.mediaDevices.getUserMedia({audio:micConstraints(S.rec&&S.rec.mode==='together')}).then(function(stream){
-    RECS.on=true;RECS.stream=stream;RECS.session=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    RECS.on=true;RECS.stream=stream;RECS.session=Date.now().toString(36)+Math.random().toString(36).slice(2,7)+'-'+Date.now();
+    VAULT.putSession({session:RECS.session,mode:S.rec.mode,question:S.rec.question||'',left:(S.rec.mode==='together'&&micPref().stereo)?micPref().left:'',startedAt:Date.now(),endedAt:Date.now()});
     RECS.idx=0;RECS.discard=false;RECS.chain=Promise.resolve();RECS.t0=Date.now();RECS.segT0=Date.now();RECS.lastVoice=Date.now();RECS.heard=false;RECS.chimed=false;RECS.floor=0.01;RECS.failed=0;
     RECS.mime=RECS.pick();
     try{var A=window.AudioContext||window.webkitAudioContext;RECS.ctx=new A();var src=RECS.ctx.createMediaStreamSource(stream);RECS.an=RECS.ctx.createAnalyser();RECS.an.fftSize=1024;src.connect(RECS.an);RECS.buf=new Float32Array(RECS.an.fftSize);}catch(e){RECS.an=null;}
@@ -888,18 +967,21 @@ RECS.seg=function(){
   var old=RECS.mr, idx=RECS.idx++, started=RECS.segT0;RECS.segT0=Date.now();
   var bps=(S.rec&&S.rec.mode==='together'&&micPref().stereo)?64000:24000;
   var mr=new MediaRecorder(RECS.stream,RECS.mime?{mimeType:RECS.mime,audioBitsPerSecond:bps}:{audioBitsPerSecond:bps});
-  var chunks=[];mr.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
-  mr.onstop=function(){var secs=(Date.now()-mr._t0)/1000;if(!chunks.length||RECS.discard)return;RECS.upload(new Blob(chunks,{type:mr.mimeType||RECS.mime||'audio/webm'}),mr._idx,secs);};
+  var chunks=[],sess=RECS.session;
+  mr.ondataavailable=function(e){if(e.data&&e.data.size){chunks.push(e.data);
+    if(chunks.length%10===0&&!RECS.discard){VAULT.putPart({session:sess,idx:mr._idx,secs:(Date.now()-mr._t0)/1000,blob:new Blob(chunks,{type:mr.mimeType||RECS.mime||'audio/webm'}),uploaded:false});VAULT.putSession({session:sess,mode:S.rec?S.rec.mode:'solo',question:S.rec?S.rec.question||'':'',left:(S.rec&&S.rec.mode==='together'&&micPref().stereo)?micPref().left:'',startedAt:RECS.t0,endedAt:Date.now(),secs:(Date.now()-RECS.t0)/1000});}}};
+  mr.onstop=function(){var secs=(Date.now()-mr._t0)/1000;if(!chunks.length||RECS.discard)return;var blob=new Blob(chunks,{type:mr.mimeType||RECS.mime||'audio/webm'});
+    RECS.saving=VAULT.putPart({session:sess,idx:mr._idx,secs:secs,blob:blob,uploaded:false}).then(function(){RECS.upload(blob,mr._idx,secs,sess);});};
   mr._idx=idx;mr._t0=Date.now();mr.start(1000);RECS.mr=mr;
   if(old&&old.state!=='inactive')old.stop();
 };
-RECS.upload=function(blob,idx,secs){
-  var session=RECS.session, mode=S.rec?S.rec.mode:'solo';
+RECS.upload=function(blob,idx,secs,sess){
+  var session=sess||RECS.session, mode=S.rec?S.rec.mode:'solo';
   RECS.chain=RECS.chain.then(function(){
     return fileToDataUrl(blob).then(function(u){
       var tries=0;
       var left=(mode==='together'&&micPref().stereo)?micPref().left:'';
-      function go(){return api('api_storyPart',session,idx,u,secs,mode,left).catch(function(e){if(++tries<3)return new Promise(function(r){setTimeout(r,2500);}).then(go);RECS.failed++;toast('One piece of audio didn\'t save: '+errMsg(e),5000);});}
+      function go(){return api('api_storyPart',session,idx,u,secs,mode,left).then(function(){return VAULT.markUploaded(session,idx);}).catch(function(e){if(++tries<3)return new Promise(function(r){setTimeout(r,2500);}).then(go);RECS.failed++;});}
       return go();
     });
   });
@@ -929,15 +1011,19 @@ RECS.finish=function(){
   var stopped=new Promise(function(res){if(mr&&mr.state!=='inactive'){var o=mr.onstop;mr.onstop=function(){o&&o();res();};mr.stop();}else res();});
   stopped.then(function(){try{RECS.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}try{RECS.ctx&&RECS.ctx.close();}catch(e){}});
   if(!rec)return;
-  if(secs<2){rec.busy=false;drawRecButton();setOrb('','');return;}
-  processRecording(rec,session,stopped.then(function(){return RECS.chain;}),'');
+  if(secs<2){VAULT.remove(session);rec.busy=false;drawRecButton();setOrb('','');return;}
+  VAULT.putSession({session:session,mode:rec.mode,question:rec.question||'',left:(rec.mode==='together'&&micPref().stereo)?micPref().left:'',startedAt:RECS.t0,endedAt:Date.now(),secs:secs,finished:true});
+  processRecording(rec,session,stopped.then(function(){return RECS.saving;}).then(function(){return RECS.chain;}),'');
 };
 function processRecording(rec,session,ready,text){
   rec.busy=true;drawRecButton();
   var steps=['Saving your voice…','Writing down your words…','Organizing your story…','Adding it to our timeline…'],k=0;
   setOrb('thinking',steps[0]);var st=setInterval(function(){k=Math.min(k+1,steps.length-1);if(S.rec===rec&&S.tab==='story')setOrb('thinking',steps[k]);},6000);
-  ready.then(function(){return api('api_storyFinish',session,{mode:rec.mode,question:rec.question,text:text});})
+  ready.then(function(){return text?true:VAULT.uploadMissing(session);}).then(function(ok){
+      if(!ok){var e=new Error('offline');e.vault=true;throw e;}
+      return api('api_storyFinish',session,{mode:rec.mode,question:rec.question,text:text});})
     .then(function(r){
+      if(!text)VAULT.remove(session);
       clearInterval(st);rec.busy=false;
       rec.results.unshift(r.recording);
       var n=[];if(r.added)n.push(r.added+' new moment'+(r.added>1?'s':''));if(r.updated)n.push(r.updated+' updated');
@@ -945,7 +1031,9 @@ function processRecording(rec,session,ready,text){
       if(r.reply&&rec.mode==='solo')rec.question=r.reply;else if(r.reply)rec.idea=r.reply;
       if(S.rec===rec&&S.tab==='story'){drawRecorder();if(rec.mode==='solo'&&r.reply)speak(r.reply);else setOrb('','');}
     })
-    .catch(function(e){clearInterval(st);rec.busy=false;if(S.rec===rec&&S.tab==='story'){drawRecButton();setOrb('','');}toast(errMsg(e)+' Your voice is saved; open Our Story later to finish it.',6500);});
+    .catch(function(e){clearInterval(st);rec.busy=false;if(S.rec===rec&&S.tab==='story'){drawRecButton();setOrb('','');}
+      toast((e&&e.vault?'No internet right now.':errMsg(e))+' Your recording is safe on this phone. Lemonade will finish saving it when you\'re back online.',7000);
+      setTimeout(function(){VAULT.resumeAll(true);},30000);});
 }
 function startRecorder(mode,opener,fresh){
   stopVoice();

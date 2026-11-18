@@ -168,6 +168,11 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .sideRow.hot{border-color:var(--accent);background:rgba(196,86,47,.10);box-shadow:0 0 0 4px rgba(196,86,47,.18)}
 .sideRow.hot .sideName{color:var(--deep)}
 .sideSay{margin-top:10px;font-weight:800;font-size:17px;color:var(--deep);text-align:center;min-height:24px}
+.vsBox{margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(240,223,204,.45);border:1px dashed var(--line)}
+.vsRow{display:flex;justify-content:space-between;padding:4px 0;font-size:15px}
+.vsOk{color:#3d8b5a;font-weight:800}.vsNo{color:var(--muted)}
+.vsRead{margin-top:8px;font-size:16px;line-height:1.4;color:var(--deep)}
+.vsCount{font-size:40px;font-weight:900;color:var(--accent);text-align:center;margin:6px 0}
 .micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
@@ -1373,11 +1378,41 @@ function wireNames(){
     S.boot.settings.names=names;api('api_setSettings',{names:names}).then(function(){toast('Names saved 💛');}).catch(function(e){toast(errMsg(e));});
   };
 }
+function voiceBox(){
+  var vs=(S.boot.settings&&S.boot.settings.voiceSamples)||{},me=S.boot.me;
+  function st(p){return '<div class="vsRow"><b>'+esc(nm(p))+'</b><span class="'+(vs[p]?'vsOk':'vsNo')+'">'+(vs[p]?'✓ voice saved':'not yet')+'</span></div>';}
+  return '<div class="vsBox" id="vsBox"><h4 style="margin:0 0 4px">🗣 Let Lemonade recognize your voices</h4>'+
+    '<p class="small muted" style="margin:0 0 8px">Each of you records 10 seconds of talking, once, on your own phone. Then when you record together, Lemonade tells your voices apart by itself, so it doesn\'t matter which mic is on whom.</p>'+
+    st('john')+st('heidi')+
+    '<div id="vsRec" class="hidden"><div class="vsRead">Read this out loud in your normal voice:<br><i>"Hi, this is '+esc(nm(me))+'. We\'re making lemonade out of lemons together, one story at a time. Today I\'m telling Lemonade what my voice sounds like."</i></div><div class="vsCount" id="vsCount">10</div></div>'+
+    '<button class="btn soft small" id="vsGo" style="margin-top:8px">'+(vs[me]?'Re-record my voice':'🎙 Record my voice (10 seconds)')+'</button>'+
+    ((vs.john&&vs.heidi)?'<p class="small" style="margin:8px 0 0;color:var(--deep)"><b>Both voices saved.</b> The left/right setting below is now just a backup.</p>':'')+'</div>';
+}
+function wireVoice(){
+  var go=$('vsGo');if(!go)return;
+  go.onclick=function(){
+    if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser can\'t record here.');return;}
+    go.disabled=true;
+    navigator.mediaDevices.getUserMedia({audio:micConstraints(false)}).then(function(stream){
+      var mime=['audio/webm;codecs=opus','audio/mp4','audio/webm',''].find(function(t){return !t||MediaRecorder.isTypeSupported(t);});
+      var mr=new MediaRecorder(stream,mime?{mimeType:mime}:undefined),chunks=[],n=10;
+      mr.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+      mr.onstop=function(){stream.getTracks().forEach(function(t){t.stop();});$('vsRec').classList.add('hidden');go.innerHTML='<span class="spinner"></span> Saving…';
+        fileToDataUrl(new Blob(chunks,{type:mr.mimeType||'audio/webm'})).then(function(d){return api('api_saveVoiceSample',d);})
+          .then(function(vs){S.boot.settings.voiceSamples=vs;$('vsBox').outerHTML=voiceBox();wireVoice();toast('Got it! Lemonade knows your voice now 💛');})
+          .catch(function(e){go.disabled=false;go.textContent='Try again';toast(errMsg(e),4500);});};
+      $('vsRec').classList.remove('hidden');go.textContent='Listening…';mr.start();
+      $('vsCount').textContent=n;
+      var iv=setInterval(function(){n--;if($('vsCount'))$('vsCount').textContent=Math.max(n,0);if(n<=0){clearInterval(iv);if(mr.state!=='inactive')mr.stop();}},1000);
+    }).catch(function(){go.disabled=false;toast('Allow the microphone, then try again.',4000);});
+  };
+}
 function micCard(){
   var m=micPref();
   return '<div class="card">'+tape(2)+'<h3>🎙 Microphone</h3><p class="small muted" style="margin:4px 0 8px">Plug in your USB microphone, then choose it here. Lemonade remembers your choice on this phone.</p>'+
     '<select class="field" id="mDev"><option value="">Phone\'s built-in microphone</option>'+(m.id?'<option value="'+esc(m.id)+'" selected>'+esc(m.label||'Chosen microphone')+'</option>':'')+'</select>'+
     '<div class="row" style="margin-top:8px"><button class="btn soft small" id="mFind">Find my microphones</button><button class="btn ghost small" id="mTest">Test it</button></div><div id="mTestBox" class="hidden" style="margin-top:10px"><div class="sideRow" id="mRowL"><div class="sideTag">LEFT</div><div class="sideName" id="mNameL"></div><div class="sideMeter"><div></div></div></div><div class="sideRow" id="mRowR"><div class="sideTag">RIGHT</div><div class="sideName" id="mNameR"></div><div class="sideMeter"><div></div></div></div><div class="sideSay" id="mSay">Tap or talk into one mic at a time…</div><div class="row" style="margin-top:8px"><button class="btn soft small" id="mSwap">⇄ Swap who is on the left</button></div></div>'+
+    voiceBox()+
     '<label class="toggle" style="margin-top:14px"><span class="sw'+(m.stereo?' on':'')+'" id="mSt"></span>Two-person mic (one on each of us)</label>'+
     '<div id="mStBox" class="'+(m.stereo?'':'hidden')+'"><p class="small muted" style="margin:8px 0 6px">Used in <b>Remember together</b>. It records in stereo so each voice stays on its own side.</p><label class="lbl" style="margin-top:4px">The LEFT mic is on</label><select class="field" id="mLeft"><option value="john"'+(m.left!=='heidi'?' selected':'')+'>'+esc(nm('john'))+'</option><option value="heidi"'+(m.left==='heidi'?' selected':'')+'>'+esc(nm('heidi'))+'</option></select></div>'+
     '<p class="small muted" style="margin-top:10px"><b>Tip:</b> the test keeps running until you tap Stop. Talk into one mic at a time: its side lights up. If both sides always move together, set your mic receiver to <b>stereo</b> (sometimes called "split" or "L/R") mode, then test again.</p><p class="small muted" style="margin-top:6px">Note: the quick-talk listening in Talk uses whatever microphone your phone picks; story recordings and voice notes use the one chosen here.</p></div>';
@@ -1434,7 +1469,7 @@ function wireMic(){
       })();
     }).catch(function(){btn.disabled=false;toast('Could not open that microphone. Tap "Find my microphones" and pick again.',4500);});
   };
-  sideNames();
+  sideNames();wireVoice();
 }
 
 /* ---------------- settings ---------------- */

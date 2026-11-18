@@ -203,6 +203,43 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .pmo{display:block;width:100%;text-align:left;border:0;border-bottom:1px dashed var(--line);background:transparent;padding:9px 2px;font:inherit;color:var(--deep)}
 .drow{display:flex;gap:8px}.drow .field{flex:1;min-width:0}
 .vaultcard{border:2px dashed var(--accent)}
+.tviewbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px}
+.tvseg{display:flex;background:rgba(240,223,204,.6);border-radius:999px;padding:4px}
+.tvseg button,.tvzoom button{border:0;background:transparent;font:inherit;font-weight:800;color:var(--muted);padding:8px 14px;border-radius:999px}
+.tvseg button.on{background:var(--paper);color:var(--deep);box-shadow:var(--shadow)}
+.tvzoom{display:flex;gap:4px}.tvzoom button{background:var(--paper);border:1px solid var(--line);width:40px;height:40px;padding:0;font-size:20px;color:var(--deep)}
+.tstage{position:relative;overflow:auto;border-radius:22px;border:1px solid var(--line);-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;cursor:grab}
+.tstage.tree{background:linear-gradient(#fdf3e3,#fbe9d4 55%,#f3dcc4)}
+.tstage.chart{background:var(--paper);background-image:radial-gradient(rgba(91,42,58,.08) 1px,transparent 1px);background-size:18px 18px}
+.tcanvas{position:relative;transform-origin:0 0}
+.tcanvas svg{position:absolute;left:0;top:0}
+.tcanvas .branch{fill:none;stroke:#7a4f33;stroke-linecap:round;opacity:.85}
+.tcanvas .root{fill:none;stroke:#8a5a3a;stroke-linecap:round;opacity:.6;stroke-dasharray:1 0}
+.tcanvas .pc{fill:none;stroke:#b98a62;stroke-width:3;stroke-linejoin:round}
+.tcanvas .cpl{stroke:var(--accent);stroke-width:4}
+.tcanvas .cplh{font-size:18px;text-anchor:middle;fill:var(--accent)}
+.tcanvas .glbl{font:800 12px Nunito,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;fill:#a07f6a}
+.tcanvas .sidelbl{font:italic 18px Fraunces,Georgia,serif;fill:#6b4429;opacity:.8}
+.tnode{position:absolute;transform:translate(-50%,-34px);display:flex;flex-direction:column;align-items:center;width:110px;background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.tnode .av{width:68px;height:68px;font-size:22px;border:3px solid #fff;box-shadow:0 4px 12px rgba(91,42,58,.25)}
+.tnode.me .av{width:78px;height:78px;border-color:var(--accent)}
+.tnode.passed .av{filter:grayscale(.6);opacity:.85}
+.tnode .tn{margin-top:4px;background:var(--paper);border-radius:999px;padding:2px 10px;font-weight:800;font-size:14px;color:var(--deep);box-shadow:0 2px 6px rgba(91,42,58,.15);white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis}
+.tnode .tb{font-size:11px;color:var(--accent);font-weight:800;margin-top:2px;background:rgba(255,255,255,.75);border-radius:999px;padding:0 6px}
+.chips2{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chips2 button{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;font:inherit;font-size:14px;color:var(--deep)}
+.chips2 button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tcanvas .sway{animation:sway 7s ease-in-out infinite alternate;transform-origin:50% 100%;transform-box:fill-box}
+@keyframes sway{from{transform:rotate(-.6deg)}to{transform:rotate(.6deg)}}
+.tnode{animation:popin .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes popin{from{opacity:0;transform:translate(-50%,-34px) scale(.4)}to{opacity:1;transform:translate(-50%,-34px) scale(1)}}
+.tnode.soon .av{box-shadow:0 0 0 4px rgba(232,163,61,.55),0 0 22px 6px rgba(232,163,61,.55);animation:glow 2.2s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 0 6px rgba(232,163,61,.75),0 0 30px 10px rgba(232,163,61,.65)}}
+.tsoon{position:absolute;top:-22px;background:#e8a33d;color:#fff;font-size:11px;font-weight:900;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.plaque{position:absolute;transform:translate(-50%,-50%);background:linear-gradient(#fff8ec,#f3e1c6);border:2px solid #b98a62;border-radius:12px;padding:6px 14px;font:700 15px Fraunces,Georgia,serif;color:#5b2a3a;text-align:center;box-shadow:0 4px 12px rgba(91,42,58,.25);white-space:nowrap}
+.plaque small{display:block;font:700 11px Nunito,system-ui,sans-serif;color:#8a5a3a;letter-spacing:.04em}
+.fleaf{position:absolute;top:-20px;width:12px;height:9px;border-radius:12px 0 12px 0;opacity:.75;animation:fall linear infinite;pointer-events:none}
+@keyframes fall{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(60px,900px) rotate(540deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.tcanvas .sway,.fleaf,.tnode,.tnode.soon .av{animation:none}}
 .micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
@@ -732,7 +769,161 @@ function leaf(p){
   return '<button class="leaf'+(p.passed?' passed':'')+'" data-p="'+esc(p.id)+'"><span class="av" data-ph="'+esc(p.photoId||'')+'">'+esc(initials(p.name))+'</span><span class="ln">'+esc(p.name)+'</span>'+
     (p.relation?'<span class="lr">'+esc(p.relation)+'</span>':'')+(d?'<span class="lb">'+(p.passed?'🕯️ ':'🎂 ')+d+'</span>':'')+'</button>';
 }
+/* ---- who belongs to whom: saved parent links, or a good guess from "John's mom", "our son", etc. ---- */
+function famLinks(ppl){
+  var by={},self={},links={};
+  ppl.forEach(function(p){by[p.id]=p;if(p.self)self[p.self]=p;});
+  var R=function(p){return String(p.relation||'').toLowerCase();};
+  var isParent=/\b(mom|mother|mama|dad|father|papa|stepmom|stepmother|stepdad|stepfather|parent)\b/;
+  var isSib=/\b(brother|sister|sibling|stepbrother|stepsister|half)/;
+  var isKid=/\b(son|daughter|child|kid|stepson|stepdaughter)\b/;
+  function sideParents(side){return ppl.filter(function(x){return !x.self&&x.side===side&&(+x.gen||0)===-1&&isParent.test(R(x))&&!/(grand|in-law|aunt|uncle)/.test(R(x));});}
+  ppl.forEach(function(p){
+    if(Array.isArray(p.parents)&&p.parents.length){links[p.id]=p.parents.filter(function(id){return by[id];});return;}
+    var g=+p.gen||0,r=R(p),side=p.side;
+    if(p.self){links[p.id]=sideParents(p.self).map(function(x){return x.id;});return;}
+    if(g===0&&isSib.test(r)&&self[side]){links[p.id]=(links[self[side].id]||sideParents(side).map(function(x){return x.id;}));return;}
+    if(g===1&&(side==='both'||/\bour\b/.test(r)||isKid.test(r))&&!/(niece|nephew|grand)/.test(r)){
+      if(side==='both'||/\bour\b/.test(r))links[p.id]=[self.john,self.heidi].filter(Boolean).map(function(x){return x.id;});
+      else if(self[side])links[p.id]=[self[side].id];
+      return;}
+    if(g===-2){
+      var kids=sideParents(side).filter(function(par){var pr=R(par),gr=r;return (/(mom|mother)/.test(pr)&&/(mom|mother)'?s/.test(gr))||(/(dad|father)/.test(pr)&&/(dad|father)'?s/.test(gr));});
+      p._childOf=(kids.length?kids:sideParents(side)).map(function(x){return x.id;});
+    }
+  });
+  ppl.forEach(function(p){(p._childOf||[]).forEach(function(cid){links[cid]=links[cid]||[];if(links[cid].indexOf(p.id)<0)links[cid].push(p.id);});delete p._childOf;});
+  return links;
+}
+function famCouples(ppl){
+  var out=[],seen={};
+  var self=ppl.filter(function(x){return x.self;});if(self.length===2){out.push([self[0].id,self[1].id]);seen[self[0].id]=seen[self[1].id]=1;}
+  ppl.forEach(function(p){
+    if(seen[p.id]||!p.spouse)return;var sp=String(p.spouse).toLowerCase().trim(),first=sp.split(' ')[0];
+    var m=ppl.find(function(q){if(q.id===p.id||seen[q.id])return false;var n=String(q.name).toLowerCase();return n===sp||n.split(' ')[0]===first&&(+q.gen||0)===(+p.gen||0);});
+    if(m){out.push([p.id,m.id]);seen[p.id]=seen[m.id]=1;}
+  });
+  return out;
+}
+/* ---- place everyone: one row per generation, parents above their kids, couples side by side ---- */
+function famLayout(ppl,mode){
+  var W=118,links=famLinks(ppl),couples=famCouples(ppl),spouseOf={},pos={};
+  couples.forEach(function(c){spouseOf[c[0]]=c[1];spouseOf[c[1]]=c[0];});
+  var rows={};ppl.forEach(function(p){var g=p.self?0:Math.max(-2,Math.min(2,+p.gen||0));(rows[g]=rows[g]||[]).push(p);});
+  var sideRank=function(p){return p.self==='john'?1:p.self==='heidi'?2:p.side==='john'?0:p.side==='heidi'?3:1.5;};
+  function placeRow(list,target){
+    list.sort(function(a,b){return (target(a)-target(b))||(sideRank(a)-sideRank(b));});
+    // keep couples next to each other
+    var out=[];list.forEach(function(p){if(out.indexOf(p)>=0)return;out.push(p);var sp=spouseOf[p.id]&&list.find(function(q){return q.id===spouseOf[p.id];});if(sp&&out.indexOf(sp)<0)out.push(sp);});
+    var xs=[];out.forEach(function(p,i){var t=target(p);xs[i]=i?Math.max(t,xs[i-1]+W):t;});
+    var shift=out.reduce(function(a,p,i){return a+target(p)-xs[i];},0)/Math.max(1,out.length);
+    out.forEach(function(p,i){pos[p.id]=xs[i]+shift;});
+  }
+  var row0=(rows[0]||[]).slice();
+  row0.sort(function(a,b){return sideRank(a)-sideRank(b);});
+  row0.forEach(function(p,i){pos[p.id]=i*W;});
+  placeRow(row0,function(p){return pos[p.id];});
+  var kidsOf={};Object.keys(links).forEach(function(c){links[c].forEach(function(par){(kidsOf[par]=kidsOf[par]||[]).push(c);});});
+  var avg=function(ids){ids=ids.filter(function(id){return pos[id]!=null;});return ids.length?ids.reduce(function(a,id){return a+pos[id];},0)/ids.length:null;};
+  var edge=function(side){var xs=Object.keys(pos).map(function(k){return pos[k];});if(!xs.length)return 0;return side==='john'?Math.min.apply(0,xs)-W:side==='heidi'?Math.max.apply(0,xs)+W:(Math.min.apply(0,xs)+Math.max.apply(0,xs))/2;};
+  [-1,-2].forEach(function(g){var list=rows[g]||[];if(!list.length)return;var tg={};list.forEach(function(p){var a=avg(kidsOf[p.id]||[]);if(a==null&&spouseOf[p.id])a=avg(kidsOf[spouseOf[p.id]]||[]);tg[p.id]=a!=null?a:edge(p.side);});placeRow(list,function(p){return tg[p.id];});});
+  [1,2].forEach(function(g){var list=rows[g]||[];if(!list.length)return;var tg={};list.forEach(function(p){var a=avg(links[p.id]||[]);tg[p.id]=a!=null?a:edge(p.side);});placeRow(list,function(p){return tg[p.id];});});
+  var minX=Math.min.apply(0,Object.keys(pos).map(function(k){return pos[k];})),maxX=Math.max.apply(0,Object.keys(pos).map(function(k){return pos[k];}));
+  var gens=Object.keys(rows).map(Number).sort(function(a,b){return a-b;});
+  var gTop=Math.min(-2,gens[0]),gBot=Math.max(1,gens[gens.length-1]);
+  var RH=mode==='tree'?150:160,pad=80;
+  var yOf=function(g){return mode==='tree'?pad+40+(gBot-g)*RH+(g<0?110:0):pad+(g-gTop)*RH;};
+  var nodes=ppl.map(function(p){var g=p.self?0:Math.max(-2,Math.min(2,+p.gen||0));return {p:p,g:g,x:pos[p.id]-minX+pad+W/2,y:yOf(g)};});
+  var w=Math.max(360,maxX-minX+pad*2+W),h=mode==='tree'?yOf(gTop)+130:yOf(gBot)+120;
+  return {nodes:nodes,links:links,couples:couples,w:w,h:h,yOf:yOf,W:W};
+}
+function seasonLeaves(){
+  var m=new Date().getMonth();
+  if(m>=8&&m<=10)return ['#d9822b','#c4562f','#e8a33d','#b5452b','#d4a017'];
+  if(m===11||m<=1)return ['#2f6b4f','#3f7f5c','#264f3c','#e9eef2','#2f6b4f'];
+  if(m>=2&&m<=4)return ['#f2a7b8','#f7c9d4','#9ccf8f','#f2a7b8','#ffffff'];
+  return ['#5aa05a','#6db36d','#4a8f4a','#83c27b','#5aa05a'];
+}
+function drawFamilyView(ppl){
+  var stage=$('tstage');if(!stage)return;
+  var mode=S.treeView||'tree',L=famLayout(ppl,mode),by={};
+  L.nodes.forEach(function(n){by[n.p.id]=n;});
+  var svg='',R=34;
+  var self=L.nodes.filter(function(n){return n.p.self;}),cx=self.length?(self[0].x+self[self.length-1].x)/2:L.w/2,cy=self.length?self[0].y:L.h/2;
+  if(mode==='tree'){
+    var groundY=cy+125,cols=seasonLeaves();
+    svg+='<defs><linearGradient id="soil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b98a62" stop-opacity=".55"/><stop offset="1" stop-color="#7a4f33" stop-opacity=".25"/></linearGradient>'+
+      '<linearGradient id="bark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b4429"/><stop offset=".5" stop-color="#8a5a3a"/><stop offset="1" stop-color="#5e3b24"/></linearGradient></defs>';
+    svg+='<rect x="0" y="'+groundY+'" width="'+L.w+'" height="'+(L.h-groundY)+'" fill="url(#soil)"/>';
+    svg+='<path d="M0 '+groundY+' Q '+L.w/4+' '+(groundY-14)+' '+L.w/2+' '+groundY+' T '+L.w+' '+groundY+'" stroke="#7a9a4a" stroke-width="6" fill="none" opacity=".6"/>';
+    // canopy leaves behind the kids, the couple and above
+    var canopy=L.nodes.filter(function(n){return n.g>=1;}).concat(self);var seed=7;var rnd=function(){seed=(seed*9301+49297)%233280;return seed/233280;};
+    var cxs=canopy.map(function(n){return n.x;}),minC=Math.min.apply(0,cxs.concat([cx-140])),maxC=Math.max.apply(0,cxs.concat([cx+140])),topC=Math.min.apply(0,canopy.map(function(n){return n.y;}).concat([cy-120]))-70;
+    svg+='<g class="sway">';
+    for(var i=0;i<90;i++){var lx=minC-40+rnd()*(maxC-minC+80),ly=topC+rnd()*(cy-topC-10),rr=16+rnd()*28;svg+='<ellipse cx="'+lx.toFixed(0)+'" cy="'+ly.toFixed(0)+'" rx="'+rr.toFixed(0)+'" ry="'+(rr*.8).toFixed(0)+'" fill="'+cols[i%cols.length]+'" opacity="'+(.22+rnd()*.32).toFixed(2)+'"/>';}
+    svg+='</g>';
+    // a few flowers/grass tufts along the ground, and a sun
+    for(var k=0;k<14;k++){var gx=rnd()*L.w;svg+='<text x="'+gx.toFixed(0)+'" y="'+(groundY-2)+'" font-size="16" text-anchor="middle">'+['🌿','🍂','🌼','🍄','🌱'][k%5]+'</text>';}
+    svg+='<circle cx="'+(L.w-60)+'" cy="60" r="34" fill="#f6c453" opacity=".55"/><circle cx="'+(L.w-60)+'" cy="60" r="50" fill="#f6c453" opacity=".18"/>';
+    // trunk from the ground up to the two of you
+    var annv=(S.boot&&S.boot.anniversary)?fmtMD(S.boot.anniversary,true):'';
+    S._plaque={x:cx,y:cy+98,txt:esc(nm('john'))+' ❤ '+esc(nm('heidi'))+(annv?'<small>since '+annv+'</small>':'')};
+    svg+='<path d="M'+(cx-46)+' '+(groundY+8)+' C '+(cx-30)+' '+(cy+30)+', '+(cx-26)+' '+(cy+10)+', '+(cx-20)+' '+(cy-10)+' L '+(cx+20)+' '+(cy-10)+' C '+(cx+26)+' '+(cy+10)+', '+(cx+30)+' '+(cy+30)+', '+(cx+46)+' '+(groundY+8)+' Z" fill="url(#bark)"/>';
+  }
+  var line=function(x1,y1,x2,y2,cls,wd){
+    if(mode==='tree'){var my=(y1+y2)/2;return '<path class="'+cls+'" d="M'+x1+' '+y1+' C '+x1+' '+my+', '+x2+' '+my+', '+x2+' '+y2+'" stroke-width="'+(wd||6)+'"/>';}
+    var mid=(y1+y2)/2;return '<path class="'+cls+'" d="M'+x1+' '+y1+' V '+mid+' H '+x2+' V '+y2+'"/>';
+  };
+  // couples
+  L.couples.forEach(function(c){var a=by[c[0]],b=by[c[1]];if(!a||!b)return;
+    if(mode==='chart')svg+='<line class="cpl" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/><text x="'+(a.x+b.x)/2+'" y="'+(a.y+5)+'" class="cplh">❤</text>';
+    else svg+='<path class="branch" d="M'+a.x+' '+a.y+' Q '+(a.x+b.x)/2+' '+(a.y+18)+' '+b.x+' '+b.y+'" stroke-width="5"/>';});
+  // parent -> child lines
+  Object.keys(L.links).forEach(function(cid){
+    var c=by[cid],ps=(L.links[cid]||[]).map(function(id){return by[id];}).filter(Boolean);if(!c||!ps.length)return;
+    var px=ps.reduce(function(a,n){return a+n.x;},0)/ps.length,py=ps[0].y;
+    if(mode==='tree'){
+      var w=c.g>=1||ps[0].g>=0?7:9;
+      if(ps[0].y<c.y)svg+=line(px,py+R,c.x,c.y-R,'branch',w);   // kids hang above parents? (not in this view)
+      else svg+=line(px,py-R,c.x,c.y+R,c.g>=0&&ps[0].g<0?'root':'branch',w);
+    } else svg+=line(px,py+R+22,c.x,c.y-R,'pc');
+  });
+  if(mode==='tree'){
+    // roots from the trunk base to anyone below ground without a drawn parent line to the couple
+    var groundY2=cy+125;
+    L.nodes.forEach(function(n){if(n.g<0){var linked=Object.keys(L.links).some(function(k){return (L.links[k]||[]).indexOf(n.p.id)>=0;});if(!linked)svg+=line(cx,groundY2+10,n.x,n.y-R,'root',5);}});
+    L.nodes.forEach(function(n){if(n.g===0&&!n.p.self){var has=(L.links[n.p.id]||[]).length;if(!has)svg+=line(cx,cy+20,n.x,n.y+R,'branch',5);}});
+    L.nodes.forEach(function(n){if(n.g>=1&&!(L.links[n.p.id]||[]).length)svg+=line(cx,cy-R,n.x,n.y+R,'branch',6);});
+    svg+='<text x="'+(cx-150)+'" y="'+(cy+160)+'" class="sidelbl" text-anchor="middle">'+esc(nm('john'))+'\'s roots</text><text x="'+(cx+150)+'" y="'+(cy+160)+'" class="sidelbl" text-anchor="middle">'+esc(nm('heidi'))+'\'s roots</text>';
+  } else {
+    var gl={'-2':'Grandparents','-1':'Parents, aunts & uncles','0':'Us, brothers & sisters','1':'Kids, nieces & nephews','2':'Grandkids'};
+    var seenG={};L.nodes.forEach(function(n){if(seenG[n.g])return;seenG[n.g]=1;svg+='<text x="12" y="'+(n.y-R-30)+'" class="glbl">'+gl[String(n.g)]+'</text>';});
+  }
+  if(mode==='chart'){var bands='';var gs={};L.nodes.forEach(function(n){gs[n.g]=n.y;});Object.keys(gs).forEach(function(g,i){bands+='<rect x="0" y="'+(gs[g]-R-44)+'" width="'+L.w+'" height="'+(R*2+70)+'" fill="'+(['#f6e6d4','#f9efe3'][i%2])+'" opacity=".55" rx="0"/>';});svg=bands+svg;}
+  var soonIds={};((S.family&&S.family.events)||[]).forEach(function(e){if(e.days<=30)soonIds[e.id]=e.type==='birthday'?'🎂':'💍';});
+  var nodesHtml=L.nodes.map(function(n,i){var p=n.p,d=p.birthday?fmtMD(p.birthday):'';
+    return '<button class="tnode'+(p.self?' me':'')+(p.passed?' passed':'')+(soonIds[p.id]?' soon':'')+'" data-p="'+esc(p.id)+'" style="left:'+n.x+'px;top:'+n.y+'px;animation-delay:'+(i*45)+'ms">'+(soonIds[p.id]?'<span class="tsoon">'+soonIds[p.id]+' soon</span>':'')+'<span class="av" data-ph="'+esc(p.photoId||'')+'">'+esc(initials(p.name))+'</span><span class="tn">'+esc(p.nickname||p.name.split(' ')[0])+'</span>'+(d?'<span class="tb">'+(p.passed?'🕯️':'🎂')+' '+d+'</span>':'')+'</button>';}).join('');
+  var extra='';
+  if(mode==='tree'&&S._plaque)extra+='<div class="plaque" style="left:'+S._plaque.x+'px;top:'+S._plaque.y+'px">'+S._plaque.txt+'</div>';
+  if(mode==='tree'){var fc=seasonLeaves();for(var f=0;f<10;f++)extra+='<span class="fleaf" style="left:'+(Math.random()*L.w).toFixed(0)+'px;animation-delay:'+(Math.random()*9).toFixed(1)+'s;animation-duration:'+(8+Math.random()*6).toFixed(1)+'s;background:'+fc[f%fc.length]+'"></span>';}
+  stage.innerHTML='<div class="tcanvas" id="tcanvas" style="width:'+L.w+'px;height:'+L.h+'px"><svg width="'+L.w+'" height="'+L.h+'" viewBox="0 0 '+L.w+' '+L.h+'">'+svg+'</svg>'+extra+nodesHtml+'</div>';
+  stage.querySelectorAll('.av[data-ph]').forEach(function(a){var id=a.getAttribute('data-ph');if(id)loadMediaUrl(id).then(function(u){a.style.backgroundImage='url('+u+')';a.textContent='';}).catch(function(){});});
+  // zoom and drag
+  var cv=$('tcanvas'),fit=Math.min(1,(stage.clientWidth-8)/L.w);
+  var z=S.treeZoom||fit;
+  function apply(){z=Math.max(.3,Math.min(2.2,z));S.treeZoom=z;cv.style.transform='scale('+z+')';cv.parentNode.style.height=Math.min(L.h*z,window.innerHeight*.72)+'px';cv.style.marginLeft=Math.max(0,(stage.clientWidth-L.w*z)/2)+'px';}
+  apply();
+  if(!S.treeZoom||S.treeZoom===fit){var meN=self[0];if(meN&&L.w*z>stage.clientWidth)stage.scrollLeft=cx*z-stage.clientWidth/2;stage.scrollTop=Math.max(0,cy*z-stage.clientHeight/2);}
+  if($('tzIn'))$('tzIn').onclick=function(){z*=1.25;apply();};
+  if($('tzOut'))$('tzOut').onclick=function(){z/=1.25;apply();};
+  if($('tzFit'))$('tzFit').onclick=function(){z=fit;apply();stage.scrollLeft=0;};
+  var drag=null;
+  stage.onpointerdown=function(e){if(e.pointerType==='touch')return;drag={x:e.clientX,y:e.clientY,l:stage.scrollLeft,t:stage.scrollTop,m:false};};
+  stage.onpointermove=function(e){if(!drag)return;var dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>6)drag.m=true;stage.scrollLeft=drag.l-dx;stage.scrollTop=drag.t-dy;};
+  stage.onpointerup=stage.onpointerleave=function(){if(drag&&drag.m){S.tdragged=true;setTimeout(function(){S.tdragged=false;},50);}drag=null;};
+}
 function renderFamily(){
+  if(!S.treeView){try{S.treeView=localStorage.getItem('cc_treeview')||'tree';}catch(e){S.treeView='tree';}}
   var box=$('tline');
   var famC=cacheRead('api_family',[]);if(famC&&!S.family){try{S.family=JSON.parse(famC);}catch(e){}}
   if(!S.moments){var stC=cacheRead('api_story',[]);if(stC){try{var so=JSON.parse(stC);S.moments=so.moments||[];S.recordings=so.recordings||[];}catch(e){}}}
@@ -745,23 +936,16 @@ function renderFamily(){
     html+='<div class="card famsoon">'+tape(1)+'<div class="eyebrow">🗓️ Coming up in the family</div>'+
       (soon.length?soon.slice(0,8).map(function(e){return '<button class="evrow" data-p="'+esc(e.id)+'"><span>'+evText(e)+'</span><span class="evw">'+fmtMD(e.date)+' · '+evWhen(e)+'</span></button>';}).join(''):
        '<p class="small muted" style="margin:4px 0 0">No birthdays or anniversaries in the next two months yet. Add birthdays to people below, and Lemonade will remind you a week ahead, on the day, and on the 15th of each month for the month after.</p>')+'</div>';
-    html+='<div class="tree"><div class="trunk"></div><div class="sides"><span>'+esc(nm('john'))+'\'s side</span><span>'+esc(nm('heidi'))+'\'s side</span></div>';
-    [-2,-1,0,1,2].forEach(function(g){
-      var row=ppl.filter(function(x){return !x.self&&(+x.gen||0)===g;});
-      var L=row.filter(function(x){return x.side==='john';}),R=row.filter(function(x){return x.side==='heidi';}),B=row.filter(function(x){return x.side!=='john'&&x.side!=='heidi';});
-      if(g===0){
-        html+='<div class="gen"><div class="glabel">'+esc(gens['0']||'')+'</div><div class="gcols"><div class="gcol">'+L.map(leaf).join('')+'</div><div class="gcol">'+R.map(leaf).join('')+'</div></div>'+
-          '<div class="us2">'+me.map(leaf).join('<span class="heart">❤</span>')+'</div>'+(B.length?'<div class="gboth">'+B.map(leaf).join('')+'</div>':'')+'</div>';
-        return;
-      }
-      if(!row.length)return;
-      html+='<div class="gen"><div class="glabel">'+esc(gens[String(g)]||'')+'</div><div class="gcols"><div class="gcol">'+L.map(leaf).join('')+'</div><div class="gcol">'+R.map(leaf).join('')+'</div></div>'+(B.length?'<div class="gboth">'+B.map(leaf).join('')+'</div>':'')+'</div>';
-    });
-    html+='</div>';
+    var tv=S.treeView||'tree';
+    html+='<div class="tviewbar"><div class="tvseg"><button data-tv="tree" class="'+(tv==='tree'?'on':'')+'">🌳 Tree</button><button data-tv="chart" class="'+(tv==='chart'?'on':'')+'">📋 Chart</button></div>'+
+      '<div class="tvzoom"><button id="tzOut" aria-label="Zoom out">−</button><button id="tzFit" aria-label="Fit">⤢</button><button id="tzIn" aria-label="Zoom in">+</button></div></div>'+
+      '<div class="tstage '+tv+'" id="tstage"></div><p class="small muted" style="text-align:center;margin:6px 0 14px">Tap anyone to see their page. Drag to move around, + and − to zoom.</p>';
     html+='<div class="row" style="justify-content:center;margin:6px 0 18px"><button class="btn" id="fAdd">'+I.plus+' Add someone</button><button class="btn soft" id="fTalk">'+I.mic+' Tell me about our family</button></div>';
     if(ppl.length<=2)html+='<div class="card empty">'+tape(0)+'<div class="big">🌳</div><div class="serif">Two roots, one tree</div>Add your parents, brothers and sisters, grandparents and kids, or just start talking. When you mention someone to the storyteller, they show up here by themselves.</div>';
     box.innerHTML=html;
-    box.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){var p=ppl.find(function(x){return x.id===b.getAttribute('data-p');});if(p)openPerson(p);};});
+    drawFamilyView(ppl);
+    box.querySelectorAll('[data-tv]').forEach(function(b){b.onclick=function(){S.treeView=b.getAttribute('data-tv');S.treeZoom=null;try{localStorage.setItem('cc_treeview',S.treeView);}catch(e){}drawFam([S.family,null]);};});
+    box.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){if(S.tdragged)return;var p=ppl.find(function(x){return x.id===b.getAttribute('data-p');});if(p)openPerson(p);};});
     box.querySelectorAll('.av[data-ph]').forEach(function(a){var id=a.getAttribute('data-ph');if(id)loadMediaUrl(id).then(function(u){a.style.backgroundImage='url('+u+')';a.textContent='';}).catch(function(){});});
     $('fAdd').onclick=function(){editPerson(null);};
     $('fTalk').onclick=function(){unlockAudio();startRecorder('solo','I\'d like to talk about our family: parents, grandparents, brothers and sisters, and kids. Ask me about them.');};
@@ -807,6 +991,7 @@ function editPerson(p){
     (p.self?'':'<label class="lbl">Who are they?</label><input class="field" id="pRel" placeholder="John\'s mom · Heidi\'s brother · our daughter" value="'+esc(p.relation)+'">'+
     '<div class="drow"><select class="field" id="pSide"><option value="john"'+(p.side==='john'?' selected':'')+'>'+esc(nm('john'))+'\'s side</option><option value="heidi"'+(p.side==='heidi'?' selected':'')+'>'+esc(nm('heidi'))+'\'s side</option><option value="both"'+(p.side==='both'?' selected':'')+'>Both of ours</option></select>'+
     '<select class="field" id="pGen">'+[-2,-1,0,1,2].map(function(g){return '<option value="'+g+'"'+((+p.gen||0)===g?' selected':'')+'>'+esc(gens[String(g)])+'</option>';}).join('')+'</select></div>')+
+    '<label class="lbl">👪 Their parents (for the lines on the tree)</label><div class="chips2" id="pPar">'+((S.family&&S.family.people)||[]).filter(function(x){return x.id!==p.id;}).map(function(x){return '<button type="button" data-par="'+esc(x.id)+'" class="'+((p.parents||[]).indexOf(x.id)>=0?'on':'')+'">'+esc(x.name)+'</button>';}).join('')+'</div><p class="small muted" style="margin:4px 0 0">Leave empty and Lemonade will guess from "who are they".</p>'+
     '<label class="lbl">🎂 Birthday</label>'+dateInputs('pB',p.birthday)+
     '<label class="lbl">💍 Married to (optional)</label><input class="field" id="pSp" placeholder="Their husband or wife" value="'+esc(p.spouse)+'">'+
     '<label class="lbl">💍 Wedding anniversary</label>'+dateInputs('pA',p.anniversary)+
@@ -821,10 +1006,11 @@ function editPerson(p){
   $('pFile').onchange=function(){var f=this.files[0];if(!f)return;$('pPh').innerHTML='<span class="spinner"></span>';
     shrinkImage(f,700).then(function(u){return api('api_uploadMedia',u,'family photo').then(function(r){photoId=r.fileId;mediaCache[photoId]=u;$('pPh').style.backgroundImage='url('+u+')';$('pPh').textContent='';});}).catch(function(e){$('pPh').textContent='📷';toast(errMsg(e));});};
   if($('pPassed'))$('pPassed').onclick=function(){this.classList.toggle('on');};
+  document.querySelectorAll('#pPar [data-par]').forEach(function(b){b.onclick=function(){b.classList.toggle('on');};});
   if($('pDel'))$('pDel').onclick=function(){if(!confirm('Remove '+p.name+' from the family tree?'))return;api('api_deletePerson',p.id).then(function(r){S.family=r;closeSheet();renderStory();toast('Removed');});};
   $('pSave').onclick=function(){
     var o={id:p.id,name:$('pName').value,nickname:$('pNick').value,relation:$('pRel')?$('pRel').value:p.relation,side:$('pSide')?$('pSide').value:p.side,gen:$('pGen')?+$('pGen').value:p.gen,
-      birthday:readDate('pB'),spouse:$('pSp').value,anniversary:readDate('pA'),from:$('pFrom').value,passed:$('pPassed')?$('pPassed').classList.contains('on'):false,notes:$('pNotes').value,sayings:$('pSay').value,photoId:photoId};
+      birthday:readDate('pB'),spouse:$('pSp').value,anniversary:readDate('pA'),from:$('pFrom').value,passed:$('pPassed')?$('pPassed').classList.contains('on'):false,notes:$('pNotes').value,sayings:$('pSay').value,photoId:photoId,parents:[].slice.call(document.querySelectorAll('#pPar [data-par].on')).map(function(b){return b.getAttribute('data-par');}).slice(0,4)};
     if(!o.name.trim()){toast('Add their name first.');return;}
     var btn=this;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
     api('api_savePerson',o).then(function(r){S.family=r;S.boot.familySoon=(r.events||[]).filter(function(e){return e.days<=14;});closeSheet();if(S.tab==='story')renderStory();toast(p.id?'Saved 💛':o.name.split(' ')[0]+' is on the tree 🌳');}).catch(function(e){btn.disabled=false;btn.textContent='Save';toast(errMsg(e));});

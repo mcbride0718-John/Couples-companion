@@ -160,6 +160,14 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .endfloat{position:fixed;left:16px;bottom:calc(100px + var(--safe-b));z-index:30;background:var(--paper);color:var(--deep);border:2px solid var(--accent);font-weight:800;font-size:15px;padding:12px 18px;border-radius:999px;box-shadow:0 8px 20px rgba(91,42,58,.25)}
 .endfloat.raised{bottom:calc(166px + var(--safe-b))}
 .endfloat:disabled{opacity:.7}
+.sideRow{display:grid;grid-template-columns:62px 1fr;gap:4px 10px;align-items:center;padding:10px 12px;border-radius:14px;border:2px solid var(--line);margin-top:8px;transition:all .15s}
+.sideRow .sideTag{font-weight:900;letter-spacing:.08em;color:var(--deep);font-size:15px}
+.sideRow .sideName{font-weight:700;color:var(--muted)}
+.sideRow .sideMeter{grid-column:1/3;height:14px;border-radius:8px;background:#efe3d6;overflow:hidden}
+.sideRow .sideMeter div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold,#e8a33d));transition:width .08s}
+.sideRow.hot{border-color:var(--accent);background:rgba(196,86,47,.10);box-shadow:0 0 0 4px rgba(196,86,47,.18)}
+.sideRow.hot .sideName{color:var(--deep)}
+.sideSay{margin-top:10px;font-weight:800;font-size:17px;color:var(--deep);text-align:center;min-height:24px}
 .micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
@@ -1369,10 +1377,10 @@ function micCard(){
   var m=micPref();
   return '<div class="card">'+tape(2)+'<h3>🎙 Microphone</h3><p class="small muted" style="margin:4px 0 8px">Plug in your USB microphone, then choose it here. Lemonade remembers your choice on this phone.</p>'+
     '<select class="field" id="mDev"><option value="">Phone\'s built-in microphone</option>'+(m.id?'<option value="'+esc(m.id)+'" selected>'+esc(m.label||'Chosen microphone')+'</option>':'')+'</select>'+
-    '<div class="row" style="margin-top:8px"><button class="btn soft small" id="mFind">Find my microphones</button><button class="btn ghost small" id="mTest">Test it</button></div><div id="mMeter" style="height:10px;border-radius:6px;background:#efe3d6;margin-top:8px;overflow:hidden"><div style="height:100%;width:0;background:var(--accent);transition:width .1s"></div></div>'+
+    '<div class="row" style="margin-top:8px"><button class="btn soft small" id="mFind">Find my microphones</button><button class="btn ghost small" id="mTest">Test it</button></div><div id="mTestBox" class="hidden" style="margin-top:10px"><div class="sideRow" id="mRowL"><div class="sideTag">LEFT</div><div class="sideName" id="mNameL"></div><div class="sideMeter"><div></div></div></div><div class="sideRow" id="mRowR"><div class="sideTag">RIGHT</div><div class="sideName" id="mNameR"></div><div class="sideMeter"><div></div></div></div><div class="sideSay" id="mSay">Tap or talk into one mic at a time…</div><div class="row" style="margin-top:8px"><button class="btn soft small" id="mSwap">⇄ Swap who is on the left</button></div></div>'+
     '<label class="toggle" style="margin-top:14px"><span class="sw'+(m.stereo?' on':'')+'" id="mSt"></span>Two-person mic (one on each of us)</label>'+
     '<div id="mStBox" class="'+(m.stereo?'':'hidden')+'"><p class="small muted" style="margin:8px 0 6px">Used in <b>Remember together</b>. It records in stereo so each voice stays on its own side.</p><label class="lbl" style="margin-top:4px">The LEFT mic is on</label><select class="field" id="mLeft"><option value="john"'+(m.left!=='heidi'?' selected':'')+'>'+esc(nm('john'))+'</option><option value="heidi"'+(m.left==='heidi'?' selected':'')+'>'+esc(nm('heidi'))+'</option></select></div>'+
-    '<p class="small muted" style="margin-top:10px">Note: the quick-talk listening in Talk uses whatever microphone your phone picks; story recordings and voice notes use the one chosen here.</p></div>';
+    '<p class="small muted" style="margin-top:10px"><b>Tip:</b> the test keeps running until you tap Stop. Talk into one mic at a time: its side lights up. If both sides always move together, set your mic receiver to <b>stereo</b> (sometimes called "split" or "L/R") mode, then test again.</p><p class="small muted" style="margin-top:6px">Note: the quick-talk listening in Talk uses whatever microphone your phone picks; story recordings and voice notes use the one chosen here.</p></div>';
 }
 function wireMic(){
   function fill(){
@@ -1388,18 +1396,45 @@ function wireMic(){
   };
   $('mDev').onchange=function(){var o=micPref();o.id=this.value;o.label=this.value?this.options[this.selectedIndex].text:'';saveMicPref(o);toast(this.value?'Using '+o.label:'Using the phone\'s microphone');};
   $('mSt').onclick=function(){var o=micPref();o.stereo=!o.stereo;if(!o.left)o.left='john';saveMicPref(o);this.classList.toggle('on',o.stereo);$('mStBox').classList.toggle('hidden',!o.stereo);};
-  $('mLeft').onchange=function(){var o=micPref();o.left=this.value;saveMicPref(o);};
+  function sideNames(){var o=micPref(),l=o.left==='heidi'?'heidi':'john',r=l==='john'?'heidi':'john';$('mNameL').textContent='= '+nm(l);$('mNameR').textContent='= '+nm(r);return {l:nm(l),r:nm(r)};}
+  $('mLeft').onchange=function(){var o=micPref();o.left=this.value;saveMicPref(o);sideNames();};
+  $('mSwap').onclick=function(){var o=micPref();o.left=o.left==='heidi'?'john':'heidi';saveMicPref(o);if($('mLeft'))$('mLeft').value=o.left;sideNames();toast('Left mic is now '+nm(o.left));};
+  var T=null;
+  function stopTest(){if(!T)return;T.on=false;try{T.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}try{T.ctx.close();}catch(e){}T=null;
+    var b=$('mTest');if(b){b.textContent='Test it';b.classList.remove('primary');}if($('mTestBox'))$('mTestBox').classList.add('hidden');}
   $('mTest').onclick=function(){
-    var bar=$('mMeter').firstChild,btn=this;btn.disabled=true;
-    navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(stream){
-      var A=window.AudioContext||window.webkitAudioContext,ctx=new A(),an=ctx.createAnalyser(),buf=new Float32Array(1024),t0=Date.now();
-      ctx.createMediaStreamSource(stream).connect(an);
-      var tr=stream.getAudioTracks()[0],set=tr&&tr.getSettings?tr.getSettings():{};
-      toast('Talk now… ('+(tr?tr.label:'mic')+(set.channelCount?', '+set.channelCount+' channel'+(set.channelCount>1?'s':''):'')+')',3500);
-      (function loop(){an.getFloatTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++)s+=buf[i]*buf[i];bar.style.width=Math.min(100,Math.sqrt(s/buf.length)*500)+'%';
-        if(Date.now()-t0<6000)requestAnimationFrame(loop);else{stream.getTracks().forEach(function(t){t.stop();});ctx.close();bar.style.width='0';btn.disabled=false;}})();
+    if(T){stopTest();return;}
+    var btn=this;btn.disabled=true;
+    navigator.mediaDevices.getUserMedia({audio:Object.assign(micConstraints(false),{channelCount:{ideal:2},echoCancellation:false,noiseSuppression:false,autoGainControl:false})}).then(function(stream){
+      btn.disabled=false;btn.textContent='■ Stop test';btn.classList.add('primary');
+      $('mTestBox').classList.remove('hidden');var names=sideNames();
+      var A=window.AudioContext||window.webkitAudioContext,ctx=new A(),src=ctx.createMediaStreamSource(stream),split=ctx.createChannelSplitter(2);
+      var aL=ctx.createAnalyser(),aR=ctx.createAnalyser();aL.fftSize=aR.fftSize=1024;src.connect(split);split.connect(aL,0);split.connect(aR,1);
+      var tr=stream.getAudioTracks()[0],set=tr&&tr.getSettings?tr.getSettings():{},ch=set.channelCount||0;
+      var bL=new Float32Array(1024),bR=new Float32Array(1024),t0=Date.now(),same=0,loud=0,lastSide='',hold=0;
+      T={on:true,stream:stream,ctx:ctx};var me=T;
+      function lvl(an,buf){an.getFloatTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++)s+=buf[i]*buf[i];return Math.sqrt(s/buf.length);}
+      var say=$('mSay');
+      say.textContent=ch===1?'This microphone is only sending ONE channel, so both sides will move together. See the tip below.':'Talk or tap on one mic at a time and watch which side lights up.';
+      (function loop(){
+        if(!me.on||T!==me)return;
+        if(!$('mTestBox')||Date.now()-t0>5*60000){stopTest();return;}   // left Settings, or 5 minutes
+        var L=lvl(aL,bL),R=lvl(aR,bR);
+        $('mRowL').querySelector('.sideMeter div').style.width=Math.min(100,L*600)+'%';
+        $('mRowR').querySelector('.sideMeter div').style.width=Math.min(100,R*600)+'%';
+        var side='';
+        if(Math.max(L,R)>0.02){loud++;if(L>R*1.8)side='L';else if(R>L*1.8)side='R';else same++;}
+        if(side){lastSide=side;hold=Date.now();}
+        var showSide=Date.now()-hold<900?lastSide:'';
+        $('mRowL').classList.toggle('hot',showSide==='L');$('mRowR').classList.toggle('hot',showSide==='R');
+        if(showSide==='L')say.textContent='🎤 That\'s the LEFT mic. Lemonade will call this voice '+names.l+'.';
+        else if(showSide==='R')say.textContent='🎤 That\'s the RIGHT mic. Lemonade will call this voice '+names.r+'.';
+        else if(loud>90&&same>loud*0.85)say.textContent='Both sides move together. The receiver is probably mixing both mics into one (mono). See the tip below.';
+        requestAnimationFrame(loop);
+      })();
     }).catch(function(){btn.disabled=false;toast('Could not open that microphone. Tap "Find my microphones" and pick again.',4500);});
   };
+  sideNames();
 }
 
 /* ---------------- settings ---------------- */

@@ -173,6 +173,35 @@ nav.tabs button.on:after{content:"";position:absolute;bottom:-4px;width:5px;heig
 .vsOk{color:#3d8b5a;font-weight:800}.vsNo{color:var(--muted)}
 .vsRead{margin-top:8px;font-size:16px;line-height:1.4;color:var(--deep)}
 .vsCount{font-size:40px;font-weight:900;color:var(--accent);text-align:center;margin:6px 0}
+.famsoon .evrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;padding:9px 0;border-top:1px dashed var(--line);font:inherit;color:var(--deep)}
+.famsoon .evrow:first-of-type{border-top:0}.famsoon .evw{font-size:13px;color:var(--accent);font-weight:800;white-space:nowrap}
+.tree{position:relative;margin:4px 0 10px;padding:6px 0}
+.tree .trunk{position:absolute;left:50%;top:30px;bottom:0;width:6px;margin-left:-3px;border-radius:3px;background:linear-gradient(#a8744f,#7a4f33);opacity:.35}
+.tree .sides{display:flex;justify-content:space-between;font-family:Fraunces,Georgia,serif;font-style:italic;color:var(--accent);font-size:17px;padding:0 4px 6px}
+.gen{position:relative;margin-bottom:16px}
+.glabel{text-align:center;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;position:relative}
+.glabel:before,.glabel:after{content:"🍂";margin:0 6px;font-size:11px}
+.gcols{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+.gcol{display:flex;flex-direction:column;gap:8px}
+.gcol:first-child{align-items:flex-end}.gcol:last-child{align-items:flex-start}
+.gboth{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px}
+.us2{display:flex;justify-content:center;align-items:center;gap:6px;margin:10px 0 2px}
+.us2 .heart{color:var(--accent);font-size:22px}
+.leaf{position:relative;display:flex;flex-direction:column;align-items:center;width:132px;max-width:100%;padding:10px 8px;border-radius:18px 18px 18px 4px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow);font:inherit;color:var(--deep);cursor:pointer}
+.gcol:first-child .leaf{border-radius:18px 18px 4px 18px}
+.leaf.passed{opacity:.85;background:linear-gradient(var(--paper),#f3ebe2)}
+.leaf .av,.av{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:#f0dfcc center/cover no-repeat;color:var(--accent);font-weight:900;font-size:17px;border:2px solid #fff;box-shadow:0 2px 6px rgba(91,42,58,.15)}
+.av.big{width:76px;height:76px;font-size:26px;flex:none}
+.leaf .ln{font-weight:800;margin-top:6px;font-size:15px;text-align:center;line-height:1.2}
+.leaf .lr,.lr{font-size:12px;color:var(--muted);text-align:center}
+.leaf .lb{font-size:12px;color:var(--accent);font-weight:700;margin-top:3px}
+.phead{display:flex;align-items:center;gap:14px;margin:4px 0 12px}
+.evpill{background:rgba(196,86,47,.1);color:var(--deep);border-radius:14px;padding:10px 12px;font-weight:700;margin:6px 0}
+.pfacts{line-height:1.9;margin:8px 0;color:var(--deep)}
+.pnotes{background:rgba(240,223,204,.45);border-radius:14px;padding:10px 12px;margin:8px 0;line-height:1.5}
+.saying{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;color:var(--deep);margin:4px 0 6px}
+.pmo{display:block;width:100%;text-align:left;border:0;border-bottom:1px dashed var(--line);background:transparent;padding:9px 2px;font:inherit;color:var(--deep)}
+.drow{display:flex;gap:8px}.drow .field{flex:1;min-width:0}
 .micstate{position:fixed;right:14px;bottom:calc(176px + var(--safe-b));z-index:30;background:var(--deep);color:#fff;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;max-width:58vw;box-shadow:var(--shadow);pointer-events:none}
 .bigmic.floating.raised{bottom:calc(158px + var(--safe-b))}
 .bigmic.floating.raised + .micstate{bottom:calc(242px + var(--safe-b))}
@@ -526,6 +555,7 @@ function renderHome(){
     '</div>'+
     keyWarn+
     (b.sealedLetters?'<div class="card" id="sealedCard" style="cursor:pointer">'+tape(2)+'<div class="eyebrow">'+I.mail+' Sealed with love</div><div class="q" style="margin:0">'+'There\'s '+(b.sealedLetters>1?b.sealedLetters+' sealed letters':'a sealed letter')+' waiting for you. Open one when the moment is right.</div></div>':'')+
+    ((b.familySoon||[]).length?'<div class="card famsoon" id="homeFam" style="cursor:pointer">'+tape(1)+'<div class="eyebrow">🗓️ Coming up in the family</div>'+b.familySoon.slice(0,4).map(function(e){return '<div class="evrow"><span>'+evText(e)+'</span><span class="evw">'+evWhen(e)+'</span></div>';}).join('')+'</div>':'')+
     '<div class="card lined">'+tape(0)+'<div class="eyebrow">'+I.sun+' Today\'s question</div><div class="q" id="qtext">'+esc(b.question)+'</div>'+
       '<div class="row"><button class="btn" id="qTalk">'+I.mic+' Talk it through</button><button class="btn soft" id="qWrite">'+I.pen+' Write</button><button class="btn ghost" id="qNew" aria-label="Different question">'+I.refresh+'</button></div></div>'+
     '<div class="card">'+tape(1,'l')+'<div class="eyebrow">'+I.sparkle+' An idea for you &amp; '+esc(nm(p))+'</div><div class="idea" id="idea"><span class="spinner"></span></div>'+
@@ -542,6 +572,7 @@ function renderHome(){
   $('usPhoto').onclick=function(){$('fUs').click();};
   if($('setAnn'))$('setAnn').onclick=renderSettings;
   $('qWrite').onclick=function(){openComposer('journal',{question:b.question});};
+  if($('homeFam'))$('homeFam').onclick=function(){S.storyView='family';go('story');};
   $('qTalk').onclick=function(){unlockAudio();startChat('checkin',b.question);};
   $('qNew').onclick=function(){var el=$('qtext');el.innerHTML='<span class="spinner"></span>';api('api_question',true).then(function(q){b.question=q;el.textContent=q;}).catch(function(e){el.textContent=b.question;toast(errMsg(e));});};
   $('ideaLove').onclick=function(){openComposer('note');};
@@ -625,11 +656,15 @@ function renderStory(){
       '<div class="q" style="margin-bottom:12px">Tell me your story, and I\'ll ask the questions that bring the memories back.</div>'+
       '<div class="row"><button class="btn" id="sTell">'+I.mic+' Tell our story</button><button class="btn soft" id="sTogether">👫 Remember together</button><button class="btn soft" id="sAdd">'+I.plus+' Add a moment</button></div>'+
       '<div style="margin-top:6px"><button class="btn ghost small" id="sFresh">Start a fresh session</button></div></div>'+
+    '<div class="seg"><button id="segT" class="'+(S.storyView!=='family'?'on':'')+'">📖 Timeline</button><button id="segF" class="'+(S.storyView==='family'?'on':'')+'">🌳 Our Family</button></div>'+
     '<div id="tline"><div class="empty"><span class="spinner"></span></div></div>';
+  $('segT').onclick=function(){S.storyView='timeline';renderStory();};
+  $('segF').onclick=function(){S.storyView='family';renderStory();};
   $('sTell').onclick=function(){unlockAudio();startRecorder('solo');};
   $('sFresh').onclick=function(){unlockAudio();startRecorder('solo',null,true);};
   $('sTogether').onclick=function(){unlockAudio();startRecorder('together');};
   $('sAdd').onclick=function(){openMoment(null);};
+  if(S.storyView==='family'){renderFamily();return;}
   api('api_story').then(function(r){
     var box=$('tline');if(!box)return;
     var ms=r.moments||[];S.moments=ms;S.recordings=r.recordings||[];
@@ -654,6 +689,119 @@ function renderStory(){
       S.recordings.forEach(function(r,i){box.appendChild(recCard(r,i));});
     }
   }).catch(function(e){$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
+}
+/* ---------------- our family tree ---------------- */
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fmtMD(d,withYear){if(!d)return '';var y=+d.slice(0,4),m=+d.slice(5,7),dd=+d.slice(8,10);if(!m)return '';return MONTHS[m-1].slice(0,3)+' '+dd+(withYear&&y?', '+y:'');}
+function initials(n){return String(n||'?').split(/\s+/).filter(String).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();}
+function evWhen(e){return e.days===0?'Today!':e.days===1?'Tomorrow':'in '+e.days+' days';}
+function evText(e){
+  if(e.type==='birthday')return (e.passed?'🕯️ ':'🎂 ')+esc(e.name)+(e.count?(e.passed?' · would have been ':' turns ')+e.count:'');
+  return '💍 '+esc(e.name)+(e.count?' · '+e.count+' years':'');
+}
+function personMoments(p){
+  var keys=[p.name,p.nickname].filter(Boolean).map(function(x){return x.toLowerCase();});
+  var first=(p.name||'').split(' ')[0].toLowerCase();if(first.length>3&&p.self)keys.push(first);
+  return (S.moments||[]).filter(function(m){var t=((m.title||'')+' '+(m.details||'')).toLowerCase();return keys.some(function(k){return k&&t.indexOf(k)>=0;});});
+}
+function leaf(p){
+  var d=p.birthday?fmtMD(p.birthday):'';
+  return '<button class="leaf'+(p.passed?' passed':'')+'" data-p="'+esc(p.id)+'"><span class="av" data-ph="'+esc(p.photoId||'')+'">'+esc(initials(p.name))+'</span><span class="ln">'+esc(p.name)+'</span>'+
+    (p.relation?'<span class="lr">'+esc(p.relation)+'</span>':'')+(d?'<span class="lb">'+(p.passed?'🕯️ ':'🎂 ')+d+'</span>':'')+'</button>';
+}
+function renderFamily(){
+  var box=$('tline');
+  Promise.all([api('api_family'),S.moments?Promise.resolve(null):api('api_story')]).then(function(res){
+    var r=res[0];if(res[1]){S.moments=res[1].moments||[];S.recordings=res[1].recordings||[];}
+    S.family=r;box=$('tline');if(!box||S.storyView!=='family')return;
+    var ppl=r.people||[],gens=r.gens||{},soon=(r.events||[]).filter(function(e){return e.days<=60;});
+    var me=ppl.filter(function(x){return x.self;});
+    var html='';
+    html+='<div class="card famsoon">'+tape(1)+'<div class="eyebrow">🗓️ Coming up in the family</div>'+
+      (soon.length?soon.slice(0,8).map(function(e){return '<button class="evrow" data-p="'+esc(e.id)+'"><span>'+evText(e)+'</span><span class="evw">'+fmtMD(e.date)+' · '+evWhen(e)+'</span></button>';}).join(''):
+       '<p class="small muted" style="margin:4px 0 0">No birthdays or anniversaries in the next two months yet. Add birthdays to people below, and Lemonade will remind you a week ahead, on the day, and on the 15th of each month for the month after.</p>')+'</div>';
+    html+='<div class="tree"><div class="trunk"></div><div class="sides"><span>'+esc(nm('john'))+'\'s side</span><span>'+esc(nm('heidi'))+'\'s side</span></div>';
+    [-2,-1,0,1,2].forEach(function(g){
+      var row=ppl.filter(function(x){return !x.self&&(+x.gen||0)===g;});
+      var L=row.filter(function(x){return x.side==='john';}),R=row.filter(function(x){return x.side==='heidi';}),B=row.filter(function(x){return x.side!=='john'&&x.side!=='heidi';});
+      if(g===0){
+        html+='<div class="gen"><div class="glabel">'+esc(gens['0']||'')+'</div><div class="gcols"><div class="gcol">'+L.map(leaf).join('')+'</div><div class="gcol">'+R.map(leaf).join('')+'</div></div>'+
+          '<div class="us2">'+me.map(leaf).join('<span class="heart">❤</span>')+'</div>'+(B.length?'<div class="gboth">'+B.map(leaf).join('')+'</div>':'')+'</div>';
+        return;
+      }
+      if(!row.length)return;
+      html+='<div class="gen"><div class="glabel">'+esc(gens[String(g)]||'')+'</div><div class="gcols"><div class="gcol">'+L.map(leaf).join('')+'</div><div class="gcol">'+R.map(leaf).join('')+'</div></div>'+(B.length?'<div class="gboth">'+B.map(leaf).join('')+'</div>':'')+'</div>';
+    });
+    html+='</div>';
+    html+='<div class="row" style="justify-content:center;margin:6px 0 18px"><button class="btn" id="fAdd">'+I.plus+' Add someone</button><button class="btn soft" id="fTalk">'+I.mic+' Tell me about our family</button></div>';
+    if(ppl.length<=2)html+='<div class="card empty">'+tape(0)+'<div class="big">🌳</div><div class="serif">Two roots, one tree</div>Add your parents, brothers and sisters, grandparents and kids, or just start talking. When you mention someone to the storyteller, they show up here by themselves.</div>';
+    box.innerHTML=html;
+    box.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){var p=ppl.find(function(x){return x.id===b.getAttribute('data-p');});if(p)openPerson(p);};});
+    box.querySelectorAll('.av[data-ph]').forEach(function(a){var id=a.getAttribute('data-ph');if(id)loadMediaUrl(id).then(function(u){a.style.backgroundImage='url('+u+')';a.textContent='';}).catch(function(){});});
+    $('fAdd').onclick=function(){editPerson(null);};
+    $('fTalk').onclick=function(){unlockAudio();startRecorder('solo','I\'d like to talk about our family: parents, grandparents, brothers and sisters, and kids. Ask me about them.');};
+  }).catch(function(e){if($('tline'))$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
+}
+function openPerson(p){
+  var ms=personMoments(p),ev=(S.family&&S.family.events||[]).filter(function(e){return e.id===p.id;});
+  var lines=[];
+  if(p.birthday)lines.push((p.passed?'🕯️ Born ':'🎂 Birthday: ')+fmtMD(p.birthday,true));
+  if(p.spouse)lines.push('💍 Married to '+esc(p.spouse)+(p.anniversary?' on '+fmtMD(p.anniversary,true):''));
+  if(p.from)lines.push('📍 From '+esc(p.from));
+  if(p.passed)lines.push('🕊️ Has passed away');
+  openSheet('<div class="row" style="justify-content:space-between;margin-bottom:6px"><span></span><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    '<div class="phead"><span class="av big" id="pAv">'+esc(initials(p.name))+'</span><div><h2 style="margin:0">'+esc(p.name)+'</h2>'+(p.nickname?'<div class="muted">"'+esc(p.nickname)+'"</div>':'')+(p.relation?'<div class="lr" style="font-size:15px">'+esc(p.relation)+'</div>':'')+'</div></div>'+
+    (ev.length?'<div class="evpill">'+ev.map(function(e){return evText(e)+' · '+evWhen(e);}).join('<br>')+'</div>':'')+
+    (lines.length?'<div class="pfacts">'+lines.join('<br>')+'</div>':'')+
+    (p.notes?'<div class="pnotes">'+esc(p.notes).replace(/\n/g,'<br>')+'</div>':'')+
+    ((p.sayings||[]).length?'<div class="eyebrow" style="margin-top:14px">💬 '+esc(p.name.split(' ')[0])+' always said</div>'+(p.sayings||[]).map(function(x){return '<div class="saying">"'+esc(x)+'"</div>';}).join(''):'')+
+    '<div class="eyebrow" style="margin-top:14px">📖 In our story</div>'+(ms.length?ms.slice(0,12).map(function(m){return '<button class="pmo" data-m="'+esc(m.id)+'"><b>'+esc(m.title)+'</b>'+(m.when?' <span class="muted small">'+esc(m.when)+'</span>':'')+'</button>';}).join(''):'<p class="small muted" style="margin:4px 0">No stories with '+esc(p.name.split(' ')[0])+' yet.</p>')+
+    '<div class="row" style="margin-top:14px"><button class="btn" id="pTell">'+I.mic+' Tell a story about '+esc(p.name.split(' ')[0])+'</button><button class="btn soft" id="pEdit">'+I.pen+' Edit</button></div>');
+  $('cX').onclick=closeSheet;
+  if(p.photoId)loadMediaUrl(p.photoId).then(function(u){if($('pAv')){$('pAv').style.backgroundImage='url('+u+')';$('pAv').textContent='';}}).catch(function(){});
+  document.querySelectorAll('.pmo').forEach(function(b){b.onclick=function(){var m=(S.moments||[]).find(function(x){return x.id===b.getAttribute('data-m');});closeSheet();if(m)setTimeout(function(){openMoment(m);},250);};});
+  $('pEdit').onclick=function(){editPerson(p);};
+  $('pTell').onclick=function(){closeSheet();unlockAudio();startRecorder('solo','I\'d like to tell you about '+p.name+(p.relation?' ('+p.relation+')':'')+'. Ask me about them.');};
+}
+function dateInputs(id,d){
+  var y=d&&+d.slice(0,4)||'',m=d?+d.slice(5,7):0,dd=d?+d.slice(8,10):0;
+  return '<div class="drow"><select class="field" id="'+id+'M"><option value="">Month</option>'+MONTHS.map(function(n,i){return '<option value="'+(i+1)+'"'+(m===i+1?' selected':'')+'>'+n+'</option>';}).join('')+'</select>'+
+    '<select class="field" id="'+id+'D"><option value="">Day</option>'+Array.from({length:31},function(_,i){return '<option'+(dd===i+1?' selected':'')+'>'+(i+1)+'</option>';}).join('')+'</select>'+
+    '<input class="field" id="'+id+'Y" inputmode="numeric" maxlength="4" placeholder="Year (if known)" value="'+y+'"></div>';
+}
+function readDate(id){var m=+$(id+'M').value,d=+$(id+'D').value,y=String($(id+'Y').value||'').replace(/\D/g,'');if(!m||!d)return '';y=y.length===4?y:'0000';return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);}
+function editPerson(p){
+  p=p||{side:S.boot.me,gen:-1};var photoId=p.photoId||'';
+  var gens=(S.family&&S.family.gens)||{'-2':'Grandparents','-1':'Parents, aunts & uncles','0':'Brothers, sisters & cousins','1':'Kids, nieces & nephews','2':'Grandkids'};
+  openSheet('<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>'+(p.id?'Edit '+esc(p.name):'Add someone')+'</h2><button class="iconbtn" id="cX">'+I.x+'</button></div>'+
+    '<div class="phead"><button class="av big" id="pPh" type="button">'+(p.name?esc(initials(p.name)):'📷')+'</button><div class="small muted">Tap to add a photo</div></div><input type="file" accept="image/*" id="pFile" class="hidden">'+
+    '<label class="lbl">Name</label><input class="field" id="pName" placeholder="Carol McBride" value="'+esc(p.name)+'">'+
+    '<label class="lbl">Nickname (optional)</label><input class="field" id="pNick" placeholder="Grandma Cookie" value="'+esc(p.nickname)+'">'+
+    (p.self?'':'<label class="lbl">Who are they?</label><input class="field" id="pRel" placeholder="John\'s mom · Heidi\'s brother · our daughter" value="'+esc(p.relation)+'">'+
+    '<div class="drow"><select class="field" id="pSide"><option value="john"'+(p.side==='john'?' selected':'')+'>'+esc(nm('john'))+'\'s side</option><option value="heidi"'+(p.side==='heidi'?' selected':'')+'>'+esc(nm('heidi'))+'\'s side</option><option value="both"'+(p.side==='both'?' selected':'')+'>Both of ours</option></select>'+
+    '<select class="field" id="pGen">'+[-2,-1,0,1,2].map(function(g){return '<option value="'+g+'"'+((+p.gen||0)===g?' selected':'')+'>'+esc(gens[String(g)])+'</option>';}).join('')+'</select></div>')+
+    '<label class="lbl">🎂 Birthday</label>'+dateInputs('pB',p.birthday)+
+    '<label class="lbl">💍 Married to (optional)</label><input class="field" id="pSp" placeholder="Their husband or wife" value="'+esc(p.spouse)+'">'+
+    '<label class="lbl">💍 Wedding anniversary</label>'+dateInputs('pA',p.anniversary)+
+    '<label class="lbl">📍 Where they\'re from</label><input class="field" id="pFrom" placeholder="Fort Smith, Arkansas" value="'+esc(p.from)+'">'+
+    (p.self?'':'<label class="toggle" style="margin-top:12px"><span class="sw'+(p.passed?' on':'')+'" id="pPassed"></span>Has passed away</label>')+
+    '<label class="lbl">Little things to remember</label><textarea class="box handbox" id="pNotes" style="min-height:90px" placeholder="Loves fishing, makes the best pecan pie, served in the Navy…">'+esc(p.notes)+'</textarea>'+
+    '<label class="lbl">Things they always said (one per line)</label><textarea class="box handbox" id="pSay" style="min-height:70px" placeholder="Measure twice, cut once.">'+esc((p.sayings||[]).join('\n'))+'</textarea>'+
+    '<div class="row" style="justify-content:space-between;margin-top:12px">'+(p.id&&!p.self?'<button class="btn ghost" id="pDel">'+I.trash+' Remove</button>':'<span></span>')+'<button class="btn" id="pSave">Save</button></div>');
+  $('cX').onclick=closeSheet;
+  if(photoId)loadMediaUrl(photoId).then(function(u){if($('pPh')){$('pPh').style.backgroundImage='url('+u+')';$('pPh').textContent='';}}).catch(function(){});
+  $('pPh').onclick=function(){$('pFile').click();};
+  $('pFile').onchange=function(){var f=this.files[0];if(!f)return;$('pPh').innerHTML='<span class="spinner"></span>';
+    shrinkImage(f,700).then(function(u){return api('api_uploadMedia',u,'family photo').then(function(r){photoId=r.fileId;mediaCache[photoId]=u;$('pPh').style.backgroundImage='url('+u+')';$('pPh').textContent='';});}).catch(function(e){$('pPh').textContent='📷';toast(errMsg(e));});};
+  if($('pPassed'))$('pPassed').onclick=function(){this.classList.toggle('on');};
+  if($('pDel'))$('pDel').onclick=function(){if(!confirm('Remove '+p.name+' from the family tree?'))return;api('api_deletePerson',p.id).then(function(r){S.family=r;closeSheet();renderStory();toast('Removed');});};
+  $('pSave').onclick=function(){
+    var o={id:p.id,name:$('pName').value,nickname:$('pNick').value,relation:$('pRel')?$('pRel').value:p.relation,side:$('pSide')?$('pSide').value:p.side,gen:$('pGen')?+$('pGen').value:p.gen,
+      birthday:readDate('pB'),spouse:$('pSp').value,anniversary:readDate('pA'),from:$('pFrom').value,passed:$('pPassed')?$('pPassed').classList.contains('on'):false,notes:$('pNotes').value,sayings:$('pSay').value,photoId:photoId};
+    if(!o.name.trim()){toast('Add their name first.');return;}
+    var btn=this;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+    api('api_savePerson',o).then(function(r){S.family=r;S.boot.familySoon=(r.events||[]).filter(function(e){return e.days<=14;});closeSheet();if(S.tab==='story')renderStory();toast(p.id?'Saved 💛':o.name.split(' ')[0]+' is on the tree 🌳');}).catch(function(e){btn.disabled=false;btn.textContent='Save';toast(errMsg(e));});
+  };
 }
 function openMoment(m){
   m=m||{};

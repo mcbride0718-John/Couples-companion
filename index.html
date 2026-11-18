@@ -398,6 +398,20 @@ function api(name){
       .catch(function(){rej(new Error('Could not reach the app. Check your internet and try again.'));});
   });
 }
+/* Speed: show the last copy saved on this phone right away, then quietly swap in the fresh one. */
+function cacheKey(name,args){return 'cc_c_'+String(BOOT.k||'').slice(0,6)+'_'+name+'_'+JSON.stringify(args||[]);}
+function cacheRead(name,args){try{return localStorage.getItem(cacheKey(name,args));}catch(e){return null;}}
+function cacheWrite(name,args,val){var k=cacheKey(name,args);try{localStorage.setItem(k,JSON.stringify(val));}catch(e){try{localStorage.removeItem(k);}catch(e2){}}}
+function swrOnce(name){return api(name).then(function(r){cacheWrite(name,[],r);return r;});}
+function swr(name,args){
+  return {then:function(fn,rej){
+    var c=cacheRead(name,args),shown=false;
+    if(c){try{fn(JSON.parse(c));shown=true;}catch(e){}}
+    var p=api.apply(null,[name].concat(args||[])).then(function(r){var j=JSON.stringify(r);cacheWrite(name,args,r);if(!shown||j!==c)return fn(r);},
+      function(e){if(shown)return;throw e;});
+    return rej?p.catch(rej):p;
+  }};
+}
 function toast(msg,ms){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},ms||2600);}
 function errMsg(e){return (e&&e.message)?e.message.replace(/^Exception:\s*/,''):String(e);}
 function nm(p){return S.boot?S.boot.names[p]:p;}
@@ -450,8 +464,12 @@ function start(){
   applySeason();
   if(!BOOT.k){$('tabs').classList.add('hidden');$('view').innerHTML='<div class="onb"><div class="big">🍋</div><h1>Almost home</h1><p>Please open the private link John set up for you. After that, this page will remember you.</p></div>';return;}
   $('view').innerHTML='<div class="empty" style="padding-top:40vh"><span class="spinner"></span></div>';
+  var bc=cacheRead('api_boot',[]),shownBoot=false;
+  try{var cb=bc&&JSON.parse(bc);if(cb&&cb.settings&&cb.settings.onboarded&&cb.today===new Date().toLocaleDateString('en-CA',{timeZone:'America/Chicago'})){S.boot=cb;applySeason();setBadge(cb.unseenNotes);go(S.tab);shownBoot=true;}}catch(e){}
   api('api_boot').then(function(b){
+    var same=shownBoot&&JSON.stringify(b)===bc;cacheWrite('api_boot',[],b);
     S.boot=b; applySeason();
+    if(shownBoot){setBadge(b.unseenNotes);if(!same&&S.tab==='home'&&!S.chat&&!S.rec&&!document.querySelector('.sheet.show'))go('home');setTimeout(function(){VAULT.resumeAll(true);},4000);nightNudge();return;}
     setTimeout(function(){VAULT.resumeAll(true);},4000);
     if(!b.settings.onboarded){renderOnboarding(0);return;}
     setBadge(b.unseenNotes);
@@ -461,7 +479,7 @@ function start(){
     nightNudge();
     var st=b.streaks, key='cel_'+b.today;
     if(st&&[3,7,14,30,50,100,365].indexOf(st.together)>=0&&!sessionFlag(key)){setTimeout(function(){celebrate(34);toast(st.together+' days in a row, together! 🍋',3500);},700);}
-  }).catch(function(e){$('view').innerHTML='<div class="card" style="margin-top:60px">Something went wrong: '+esc(errMsg(e))+'</div>';});
+  }).catch(function(e){if(shownBoot){toast('Showing what\'s saved on this phone. '+errMsg(e),4000);return;}$('view').innerHTML='<div class="card" style="margin-top:60px">Something went wrong: '+esc(errMsg(e))+'</div>';});
 }
 /* Late at night (midnight to 6 AM), gently offer Heidi a sealed letter. Once a night. */
 function nightNudge(){
@@ -558,7 +576,7 @@ function renderHome(){
     keyWarn+
     (b.sealedLetters?'<div class="card" id="sealedCard" style="cursor:pointer">'+tape(2)+'<div class="eyebrow">'+I.mail+' Sealed with love</div><div class="q" style="margin:0">'+'There\'s '+(b.sealedLetters>1?b.sealedLetters+' sealed letters':'a sealed letter')+' waiting for you. Open one when the moment is right.</div></div>':'')+
     ((b.familySoon||[]).length?'<div class="card famsoon" id="homeFam" style="cursor:pointer">'+tape(1)+'<div class="eyebrow">🗓️ Coming up in the family</div>'+b.familySoon.slice(0,4).map(function(e){return '<div class="evrow"><span>'+evText(e)+'</span><span class="evw">'+evWhen(e)+'</span></div>';}).join('')+'</div>':'')+
-    '<div class="card lined">'+tape(0)+'<div class="eyebrow">'+I.sun+' Today\'s question</div><div class="q" id="qtext">'+esc(b.question)+'</div>'+
+    '<div class="card lined">'+tape(0)+'<div class="eyebrow">'+I.sun+' Today\'s question</div><div class="q" id="qtext">'+(b.question?esc(b.question):'<span class="muted" style="font-size:.8em">✨ Writing today\'s question…</span>')+'</div>'+
       '<div class="row"><button class="btn" id="qTalk">'+I.mic+' Talk it through</button><button class="btn soft" id="qWrite">'+I.pen+' Write</button><button class="btn ghost" id="qNew" aria-label="Different question">'+I.refresh+'</button></div></div>'+
     '<div class="card">'+tape(1,'l')+'<div class="eyebrow">'+I.sparkle+' An idea for you &amp; '+esc(nm(p))+'</div><div class="idea" id="idea"><span class="spinner"></span></div>'+
       '<div class="row" style="margin-top:12px"><button class="btn soft" id="ideaLove">'+I.heart+' Send '+esc(nm(p))+' some love</button><button class="btn ghost" id="ideaNew" aria-label="Another idea">'+I.refresh+'</button></div></div>'+
@@ -574,6 +592,7 @@ function renderHome(){
   $('usPhoto').onclick=function(){$('fUs').click();};
   if($('setAnn'))$('setAnn').onclick=renderSettings;
   $('qWrite').onclick=function(){openComposer('journal',{question:b.question});};
+  if(!b.question&&!S.qLoading){S.qLoading=true;api('api_question',false).then(function(q){S.qLoading=false;b.question=q;if(S.boot)S.boot.question=q;if($('qtext'))$('qtext').textContent=q;cacheWrite('api_boot',[],S.boot);}).catch(function(){S.qLoading=false;if($('qtext'))$('qtext').textContent='How was your day, really?';});}
   if($('homeFam'))$('homeFam').onclick=function(){S.storyView='family';go('story');};
   $('qTalk').onclick=function(){unlockAudio();startChat('checkin',b.question);};
   $('qNew').onclick=function(){var el=$('qtext');el.innerHTML='<span class="spinner"></span>';api('api_question',true).then(function(q){b.question=q;el.textContent=q;}).catch(function(e){el.textContent=b.question;toast(errMsg(e));});};
@@ -611,7 +630,7 @@ function renderLove(){
   $('lnVoice').onclick=function(){openComposer('note',{autoVoice:true});};
   $('lnVideo').onclick=function(){openComposer('note',{autoVideo:true});};
   $('lnLetter').onclick=function(){openComposer('letter');};
-  api('api_feed',{types:['note','letter']}).then(function(list){
+  swr('api_feed',[{types:['note','letter']}]).then(function(list){
     var notes=list.filter(function(e){return e.type==='note';}), letters=list.filter(function(e){return e.type==='letter';});
     var lb=$('letters');if(!lb)return;
     if(!letters.length){lb.innerHTML='<div class="muted small" style="padding:0 4px 18px">Sealed letters for the right moment. Write one for '+esc(nm(p))+' to open when '+(p==='heidi'?'she':'he')+' needs it most.</div>';}
@@ -669,7 +688,7 @@ function renderStory(){
   $('sAdd').onclick=function(){openMoment(null);};
   VAULT.sessions().then(VAULT.drawCards);
   if(S.storyView==='family'){renderFamily();return;}
-  api('api_story').then(function(r){
+  swr('api_story',[]).then(function(r){
     var box=$('tline');if(!box)return;
     var ms=r.moments||[];S.moments=ms;S.recordings=r.recordings||[];
     var recById={};S.recordings.forEach(function(x){recById[x.id]=x;});
@@ -715,7 +734,9 @@ function leaf(p){
 }
 function renderFamily(){
   var box=$('tline');
-  Promise.all([api('api_family'),S.moments?Promise.resolve(null):api('api_story')]).then(function(res){
+  var famC=cacheRead('api_family',[]);if(famC&&!S.family){try{S.family=JSON.parse(famC);}catch(e){}}
+  if(!S.moments){var stC=cacheRead('api_story',[]);if(stC){try{var so=JSON.parse(stC);S.moments=so.moments||[];S.recordings=so.recordings||[];}catch(e){}}}
+  var drawFam=function(res){
     var r=res[0];if(res[1]){S.moments=res[1].moments||[];S.recordings=res[1].recordings||[];}
     S.family=r;box=$('tline');if(!box||S.storyView!=='family')return;
     var ppl=r.people||[],gens=r.gens||{},soon=(r.events||[]).filter(function(e){return e.days<=60;});
@@ -744,7 +765,9 @@ function renderFamily(){
     box.querySelectorAll('.av[data-ph]').forEach(function(a){var id=a.getAttribute('data-ph');if(id)loadMediaUrl(id).then(function(u){a.style.backgroundImage='url('+u+')';a.textContent='';}).catch(function(){});});
     $('fAdd').onclick=function(){editPerson(null);};
     $('fTalk').onclick=function(){unlockAudio();startRecorder('solo','I\'d like to talk about our family: parents, grandparents, brothers and sisters, and kids. Ask me about them.');};
-  }).catch(function(e){if($('tline'))$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';});
+  };
+  if(S.family&&S.moments){try{drawFam([S.family,null]);}catch(e){}}
+  Promise.all([swrOnce('api_family'),S.moments?Promise.resolve(null):swrOnce('api_story')]).then(drawFam).catch(function(e){if($('tline')&&!S.family)$('tline').innerHTML='<div class="card">'+esc(errMsg(e))+'</div>';else toast(errMsg(e));});
 }
 function openPerson(p){
   var ms=personMoments(p),ev=(S.family&&S.family.events||[]).filter(function(e){return e.id===p.id;});
@@ -1086,7 +1109,7 @@ function renderJournal(){
   v.querySelectorAll('.seg button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-w')===w);b.onclick=function(){S.journalWho=b.getAttribute('data-w');renderJournal();wireGear();};});
   $('jWrite').onclick=function(){openComposer('journal',{question:S.boot.question});};
   $('jTalk').onclick=function(){unlockAudio();startChat('checkin');};
-  api('api_feed',{types:['journal','drop','chat'],who:w}).then(function(list){
+  swr('api_feed',[{types:['journal','drop','chat'],who:w}]).then(function(list){
     var box=$('jlist');if(!box)return;box.innerHTML='';
     if(!list.length){
       var msg = w==='partner' ? (S.boot.partnerSharing==='all'?esc(nm(p))+' hasn\'t written anything yet.':esc(nm(p))+' keeps '+(p==='heidi'?'her':'his')+' journal private for now.') : 'Answer today\'s question or do a check-in to start your journal.';
@@ -1101,7 +1124,7 @@ function renderMemories(){
   var v=$('view');
   v.innerHTML=topbar('Memories','The sweet stuff, saved')+'<div id="mlist"><div class="empty"><span class="spinner"></span></div></div>';
   $('fab').classList.remove('hidden');$('fab').onclick=function(){openComposer('memory');};
-  api('api_feed',{types:['memory']}).then(function(list){
+  swr('api_feed',[{types:['memory']}]).then(function(list){
     var box=$('mlist');if(!box)return;box.innerHTML='';
     if(!list.length){box.innerHTML='<div class="card empty">'+tape(1)+'<div class="big">📷</div><div class="serif">Start your memory book</div>Tap + to save a photo, a video or a moment you never want to forget.</div>';return;}
     list.forEach(function(e,i){box.appendChild(entryEl(e,{autoload:true,i:i}));});
@@ -1270,7 +1293,7 @@ function renderTalk(){
     '</div><div class="sectionhead" style="margin-top:22px"><span class="hand">Recent talks</span></div><div id="tRecent"></div>';
   $('tCheck').onclick=function(){unlockAudio();startChat('checkin');};
   $('tTalk').onclick=function(){unlockAudio();startChat('talk');};
-  api('api_feed',{types:['chat'],who:'me',limit:8}).then(function(list){
+  swr('api_feed',[{types:['chat'],who:'me',limit:8}]).then(function(list){
     var box=$('tRecent');if(!box)return;
     if(!list.length){box.innerHTML='<div class="muted small" style="padding:0 4px">Your talks will be saved here, in your journal.</div>';return;}
     list.forEach(function(e,i){box.appendChild(entryEl(e,{i:i}));});
@@ -1531,7 +1554,7 @@ function renderIdeas(){
   $('iNew').onclick=function(){openComposer('idea');};
   $('iVoice').onclick=function(){openComposer('idea',{autoVoice:true});};
   $('iBack').onclick=function(){go(S.tab||'home');};
-  api('api_feed',{types:['idea'],limit:200}).then(function(list){
+  swr('api_feed',[{types:['idea'],limit:200}]).then(function(list){
     S.ideas=list;var box=$('ilist');if(!box)return;box.innerHTML='';
     if(!list.length){box.innerHTML='<div class="card empty">'+tape(0)+'<div class="big">💡</div><div class="serif">No ideas yet</div>Heidi already had a great one: notifications! What\'s next?</div>';return;}
     list.forEach(function(e,i){
